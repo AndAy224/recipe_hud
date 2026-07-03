@@ -26,7 +26,10 @@ class ExtractionError(Exception):
 
 async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = False) -> dict:
     cached = await db.fetchone("SELECT * FROM recipe_cache WHERE url = ?", (url,))
-    if cached and not refresh and _age_days(cached["fetched_at"]) <= store.get("recipe_cache_max_age_days"):
+    # Saved recipes never expire (the source page may vanish; the cache IS the copy).
+    if cached and not refresh and (
+        cached["saved"] or _age_days(cached["fetched_at"]) <= store.get("recipe_cache_max_age_days")
+    ):
         return _row_to_dict(cached)
     try:
         html = await _fetch(url)
@@ -37,6 +40,7 @@ async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = 
         raise ExtractionError(f"Could not fetch the page ({exc})") from exc
     data = _parse(html, url)
     await _save(db, data)
+    data["saved"] = bool(cached["saved"]) if cached else False
     return data
 
 
@@ -157,6 +161,7 @@ def _row_to_dict(row: dict) -> dict:
         "steps": json.loads(row["steps_json"]),
         "source_host": row["source_host"],
         "fetched_at": row["fetched_at"],
+        "saved": bool(row["saved"]),
     }
 
 

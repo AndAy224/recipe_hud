@@ -41,5 +41,7 @@ CREATE TABLE recipe_cache (
     ingredients_json TEXT NOT NULL,
     steps_json TEXT NOT NULL,
     source_host TEXT NOT NULL,
-    fetched_at TEXT NOT NULL
+    fetched_at TEXT NOT NULL,
+    saved INTEGER NOT NULL DEFAULT 0,
+    saved_at TEXT
 );

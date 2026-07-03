@@ -59,7 +59,19 @@ frontend turns durations found in step text into tap-to-start timer buttons.
 
 **Auth model** (documented tradeoff for a home LAN): requests from localhost
 (the kiosk) are implicitly trusted; mutating admin routes and `/admin` require
-HTTP Basic from other hosts. Read/timer routes are open on the LAN.
+HTTP Basic from other hosts. Read/timer routes are open on the LAN, as are
+recipe save/unsave, `POST /api/send` (drive the kiosk to a URL — the point is
+zero-friction from a phone; `HttpUrl` validation blocks `javascript:`/`file:`
+payloads) and the weather proxy.
+
+**My Recipes**: saving marks the cached extraction row (`recipe_cache.saved`)
+— saved rows never expire and always serve from cache, so the library works
+offline and survives the source page disappearing.
+
+**Night dim**: when the configured night window flips, the idle loop
+broadcasts `night.state`; every UI raises a `pointer-events: none` warm veil
+(never a CSS `filter` on an ancestor — that would re-parent every
+`position: fixed` scrim). Requires night mode to be enabled.
 
 ## WebSocket protocol
 
@@ -73,8 +85,10 @@ go over REST. Client → server: throttled `{"type": "activity"}` pings.
 | `timer.created/updated/cancelled` | timer object / `{id}` |
 | `alarm.start` / `alarm.stop` | `{id, label, volume}` / `{id}` |
 | `display.state` | `{state: active\|clock\|off}` |
-| `navigate` | `{url}` (admin "open on kiosk") |
+| `navigate` | `{url}` (admin "open on kiosk", `POST /api/send`) |
 | `settings.updated` | changed keys |
+| `night.state` | `{night: bool}` — night window flipped |
+| `recipes.updated` | `{}` — a recipe was saved/unsaved |
 
 ## Repo map
 

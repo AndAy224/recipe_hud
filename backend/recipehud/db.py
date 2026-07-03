@@ -2,7 +2,7 @@ from pathlib import Path
 
 import aiosqlite
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 
@@ -21,11 +21,19 @@ class Database:
     async def _migrate(self) -> None:
         cur = await self.conn.execute("PRAGMA user_version")
         version = (await cur.fetchone())[0]
-        if version < 1:
+        if version == 0:
+            # Fresh install: schema.sql already produces the latest shape.
             await self.conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
             await self.conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
             await self.conn.commit()
-        # Future migrations: if version < 2: ... etc.
+            return
+        if version < 2:
+            await self.conn.execute(
+                "ALTER TABLE recipe_cache ADD COLUMN saved INTEGER NOT NULL DEFAULT 0")
+            await self.conn.execute(
+                "ALTER TABLE recipe_cache ADD COLUMN saved_at TEXT")
+            await self.conn.execute("PRAGMA user_version = 2")
+            await self.conn.commit()
 
     async def close(self) -> None:
         if self.conn:

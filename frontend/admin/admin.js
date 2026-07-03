@@ -87,6 +87,50 @@ $("site-add").onsubmit = async (ev) => {
   loadSites();
 };
 
+// ------------------------------------------------------------- my recipes
+
+async function loadRecipes() {
+  const recipes = await api("/api/recipe/saved");
+  $("recipes-list").replaceChildren(...recipes.map((r) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <span class="grow"><strong></strong><br><span class="sub"></span></span>
+      <button class="open">Open on kiosk</button>
+      <button class="danger del">Remove</button>`;
+    div.querySelector("strong").textContent = r.title;
+    div.querySelector(".sub").textContent =
+      `${r.source_host} · saved ${(r.saved_at || "").slice(0, 10)}`;
+    div.querySelector(".open").onclick = () =>
+      api("/api/system/navigate", "POST", {
+        url: `${location.origin}/recipe?url=${encodeURIComponent(r.url)}`,
+      });
+    div.querySelector(".del").onclick = async () => {
+      if (confirm(`Remove "${r.title}" from My Recipes?`)) {
+        await api("/api/recipe/unsave", "POST", { url: r.url });
+        loadRecipes();
+      }
+    };
+    return div;
+  }));
+}
+
+$("recipe-add").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const url = new FormData(ev.target).get("url");
+  const btn = $("recipe-add-btn");
+  btn.disabled = true;
+  btn.textContent = "Fetching…";
+  try {
+    await api("/api/recipe/save", "POST", { url });
+    ev.target.reset();
+    loadRecipes();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save recipe";
+  }
+};
+
 // ---------------------------------------------------------------- presets
 
 async function loadPresets() {
@@ -119,9 +163,9 @@ $("preset-add").onsubmit = async (ev) => {
 // --------------------------------------------------------------- settings
 
 const SETTINGS_FIELDS = [
-  "idle_timeout_s", "clock_to_off_s", "night_mode_enabled", "night_off_start",
-  "night_off_end", "night_idle_timeout_s", "alarm_volume", "theme",
-  "display_output", "touch_device",
+  "idle_timeout_s", "clock_to_off_s", "night_mode_enabled", "night_dim_enabled",
+  "night_off_start", "night_off_end", "night_idle_timeout_s", "alarm_volume",
+  "theme", "weather_location", "display_output", "touch_device",
 ];
 
 function fillSettings(settings) {
@@ -164,6 +208,26 @@ $("test-alarm").onclick = () => {
   testAudio.currentTime = 0;
   testAudio.play();
   setTimeout(() => testAudio.pause(), 3000);
+};
+
+$("geo-search").onclick = async () => {
+  const q = $("geo-query").value.trim();
+  if (q.length < 2) return;
+  const results = await api(`/api/weather/geocode?q=${encodeURIComponent(q)}`);
+  $("geo-results").replaceChildren(...(results.length ? results : []).map((r) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    const coords = `${r.latitude.toFixed(2)},${r.longitude.toFixed(2)}`;
+    div.innerHTML = `<span class="grow"></span><button class="pick">Use</button>`;
+    div.querySelector(".grow").textContent =
+      [r.name, r.admin1, r.country].filter(Boolean).join(", ");
+    div.querySelector(".pick").onclick = async () => {
+      fillSettings(await api("/api/settings", "PATCH", { weather_location: coords }));
+      $("geo-results").replaceChildren();
+    };
+    return div;
+  }));
+  if (!results.length) $("geo-results").textContent = "No matches.";
 };
 
 $("password-form").onsubmit = async (ev) => {
@@ -229,9 +293,12 @@ new WSClient("admin", (type, data) => {
     renderLive();
   } else if (type === "display.state") {
     api("/api/display").then(renderLive);
+  } else if (type === "recipes.updated") {
+    loadRecipes();
   }
 });
 
 loadSites();
+loadRecipes();
 loadPresets();
 loadSettings();

@@ -67,6 +67,74 @@ function openSite(site) {
     : site.url;
 }
 
+// ----------------------------------------------------------- my recipes
+
+async function loadMyRecipes() {
+  let saved = [];
+  try {
+    saved = await (await fetch("/api/recipe/saved")).json();
+  } catch { /* backend unreachable */ }
+  $("my-recipes").hidden = saved.length === 0;
+  $("recipe-tiles").replaceChildren(...saved.map((r) => {
+    const btn = document.createElement("button");
+    btn.className = "recipe-tile";
+    if (r.image_url) btn.style.backgroundImage = `url("${r.image_url}")`;
+    else btn.style.background = "var(--bg-raised)";
+    btn.innerHTML = `<span class="rt-shade"><span class="rt-title"></span><span class="rt-host"></span></span>`;
+    btn.querySelector(".rt-title").textContent = r.title;
+    btn.querySelector(".rt-host").textContent =
+      `${r.image_url ? "" : "📖 "}${r.source_host}`;
+    btn.onclick = () => { location.href = `/recipe?url=${encodeURIComponent(r.url)}`; };
+    return btn;
+  }));
+}
+
+// --------------------------------------------------------------- weather
+
+async function loadWeather() {
+  let w = null;
+  try {
+    w = await (await fetch("/api/weather")).json();
+  } catch { /* backend unreachable */ }
+  const ok = w && w.configured && !w.error;
+  $("weather").hidden = !ok;
+  const text = ok
+    ? `${w.emoji} ${Math.round(w.temp)}° · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
+    : "";
+  $("weather").textContent = text;
+  $("scrim-weather").textContent = text;
+}
+setInterval(loadWeather, 15 * 60 * 1000);
+
+// ------------------------------------------------------- send-from-phone
+
+$("send-btn").onclick = async () => {
+  $("send-sheet").hidden = false;
+  let info = null;
+  try {
+    info = await (await fetch("/api/send/info")).json();
+  } catch { /* backend unreachable */ }
+  if (info && info.send_url) {
+    $("send-qr").src = "/api/send/qr.svg";
+    $("send-qr").hidden = false;
+    $("send-url").textContent = info.send_url;
+  } else {
+    $("send-qr").hidden = true;
+    $("send-url").textContent =
+      "No network address detected — find the Pi's IP and open http://<ip>:8000/send on your phone.";
+  }
+};
+$("send-close").onclick = () => { $("send-sheet").hidden = true; };
+
+// ------------------------------------------------------------ night dim
+
+let nightNow = false;
+
+function applyNight() {
+  document.documentElement.dataset.night =
+    nightNow && settings.night_dim_enabled ? "1" : "";
+}
+
 // ---------------------------------------------------------------- timers
 
 function renderTimers() {
@@ -274,7 +342,8 @@ const ws = new WSClient("launcher", (type, data) => {
   if (type === "snapshot") {
     timers = data.timers;
     settings = data.settings;
-    renderTimers(); renderKeepAwake(); applyTheme();
+    nightNow = !!data.display.night;
+    renderTimers(); renderKeepAwake(); applyTheme(); applyNight();
     setDisplayState(data.display.state);
     if (!hasExtension()) {
       const ringing = timers.find((t) => t.state === "ringing");
@@ -299,10 +368,17 @@ const ws = new WSClient("launcher", (type, data) => {
     location.href = data.url;
   } else if (type === "settings.updated") {
     Object.assign(settings, data);
-    renderKeepAwake(); applyTheme();
+    renderKeepAwake(); applyTheme(); applyNight();
+  } else if (type === "night.state") {
+    nightNow = !!data.night;
+    applyNight();
+  } else if (type === "recipes.updated") {
+    loadMyRecipes();
   }
 });
 
 document.addEventListener("pointerdown", () => ws.sendActivity(), { capture: true });
 
 loadSites();
+loadMyRecipes();
+loadWeather();

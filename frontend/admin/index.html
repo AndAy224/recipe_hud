@@ -48,6 +48,15 @@
   </section>
 
   <section>
+    <h2>My Recipes</h2>
+    <div id="recipes-list"></div>
+    <form id="recipe-add" class="card row">
+      <input name="url" type="url" placeholder="https://… recipe URL" required>
+      <button id="recipe-add-btn" class="primary">Save recipe</button>
+    </form>
+  </section>
+
+  <section>
     <h2>Timer presets</h2>
     <div id="presets-list"></div>
     <form id="preset-add" class="card row">
@@ -66,6 +75,7 @@
       <label>Clock screen before display off (seconds)
         <input name="clock_to_off_s" type="number" min="10"></label>
       <label class="check"><input name="night_mode_enabled" type="checkbox"> Night mode (shorter timeout, straight to off)</label>
+      <label class="check"><input name="night_dim_enabled" type="checkbox"> Night dim (warm overlay during the night window — requires Night mode)</label>
       <div class="row">
         <label>Night starts <input name="night_off_start" type="time"></label>
         <label>Night ends <input name="night_off_end" type="time"></label>
@@ -78,6 +88,15 @@
       <label>Theme
         <select name="theme"><option value="dark">Dark</option><option value="light">Light</option></select>
       </label>
+      <label>Weather location — search a city
+        <span class="row">
+          <input id="geo-query" placeholder="e.g. Springfield">
+          <button type="button" id="geo-search">Search</button>
+        </span>
+      </label>
+      <div id="geo-results"></div>
+      <label>Weather location (lat,lon — empty disables weather)
+        <input name="weather_location" placeholder="39.80,-89.64"></label>
       <label>Display output name (wlopm) <input name="display_output"></label>
       <label>Touch device override (optional, /dev/input/eventN) <input name="touch_device"></label>
       <button class="primary">Save settings</button>

@@ -60,7 +60,20 @@ button.danger { background: var(--danger); color: #fff; }
 
 .scrim .scrim-clock { font-size: 7rem; font-weight: 200; color: #cfd3da; }
 .scrim .scrim-date { font-size: 1.6rem; color: #6c7280; margin-top: 0.6rem; }
-.scrim.mode-off .scrim-clock, .scrim.mode-off .scrim-date { visibility: hidden; }
+.scrim .scrim-weather { font-size: 2rem; color: #9aa0ac; margin-top: 1.2rem; }
+.scrim.mode-off .scrim-clock, .scrim.mode-off .scrim-date,
+.scrim.mode-off .scrim-weather { visibility: hidden; }
+
+/* Night dim: a pointer-events-none veil, NOT a filter — a filtered ancestor
+   would become the containing block for every position:fixed scrim/sheet. */
+html[data-night="1"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+  background: rgba(70, 30, 5, 0.38);
+}
 
 .alarm-flash {
   position: fixed;

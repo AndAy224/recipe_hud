@@ -8,7 +8,9 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import input_watch
-from .api import debug, display, recipe, settings as settings_api, sites, system, timers
+from .api import (
+    debug, display, recipe, send, settings as settings_api, sites, system, timers, weather,
+)
 from .api.auth import UNAUTHORIZED_HEADERS, check_basic_header, is_local
 from .config import CONFIG
 from .db import Database
@@ -82,6 +84,8 @@ app.include_router(settings_api.router)
 app.include_router(display.router)
 app.include_router(system.router)
 app.include_router(recipe.router)
+app.include_router(weather.router)
+app.include_router(send.router)
 if CONFIG.debug:
     app.include_router(debug.router)
 
@@ -129,4 +133,5 @@ async def recipe_page():
 app.mount("/shared", StaticFiles(directory=FRONTEND / "shared"), name="shared")
 app.mount("/admin", StaticFiles(directory=FRONTEND / "admin", html=True), name="admin")
 app.mount("/recipe", StaticFiles(directory=FRONTEND / "recipe"), name="recipe")
+app.mount("/send", StaticFiles(directory=FRONTEND / "send", html=True), name="send")
 app.mount("/", StaticFiles(directory=FRONTEND / "launcher", html=True), name="launcher")

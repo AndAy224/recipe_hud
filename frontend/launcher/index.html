@@ -9,8 +9,10 @@
 </head>
 <body>
   <header>
+    <button id="send-btn" title="Send from phone">📲</button>
     <div id="clock">--:--</div>
     <div id="date"></div>
+    <div id="weather" hidden></div>
   </header>
 
   <section id="timers-strip" hidden></section>
@@ -18,6 +20,11 @@
   <section id="recents" hidden>
     <h2>Recent</h2>
     <div id="recent-tiles" class="tile-grid"></div>
+  </section>
+
+  <section id="my-recipes" hidden>
+    <h2>My Recipes</h2>
+    <div id="recipe-tiles" class="tile-grid"></div>
   </section>
 
   <main>
@@ -60,10 +67,23 @@
     </div>
   </div>
 
+  <!-- Send-from-phone sheet: QR code + URL -->
+  <div id="send-sheet" class="sheet" hidden>
+    <div class="sheet-body">
+      <h2>Send a recipe from your phone</h2>
+      <img id="send-qr" alt="QR code to the send page" hidden>
+      <p id="send-url"></p>
+      <div class="sheet-actions">
+        <button id="send-close">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Fallback idle scrim + alarm flash (used when the extension is absent, e.g. dev) -->
   <div id="scrim" class="scrim">
     <div class="scrim-clock" id="scrim-clock"></div>
     <div class="scrim-date" id="scrim-date"></div>
+    <div class="scrim-weather" id="scrim-weather"></div>
   </div>
   <div id="alarm-flash" class="alarm-flash">
     <div class="alarm-label" id="alarm-label"></div>

@@ -12,6 +12,7 @@ DEFAULTS: dict = {
     "night_off_start": "22:30",
     "night_off_end": "06:30",
     "night_idle_timeout_s": 60,     # ACTIVE -> OFF directly inside night window
+    "night_dim_enabled": True,      # warm dim veil during the night window
     "keep_awake": False,            # manual "cooking mode" toggle
     "alarm_volume": 80,             # 0-100
     "alarm_auto_dismiss_s": 600,    # stop ringing after this long

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Send to kitchen display</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/send/send.css">
+</head>
+<body>
+  <h1>📲 → 🖥 Send to the kitchen display</h1>
+  <p class="hint">Paste a recipe link and it opens on the kitchen screen.</p>
+
+  <input id="url" type="url" placeholder="https://…" autocomplete="off" inputmode="url">
+
+  <button id="open-direct" class="primary">▶ Open on kiosk</button>
+  <button id="open-clean">✨ Open as clean view</button>
+  <button id="save">★ Save to My Recipes</button>
+
+  <p id="status"></p>
+
+  <script type="module" src="/send/send.js"></script>
+</body>
+</html>

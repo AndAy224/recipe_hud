@@ -69,7 +69,15 @@ button:active { filter: brightness(1.3); }
 .scrim[hidden] { display: none; }
 .scrim .sc-time { font-size: 15vw; font-weight: 200; color: #cfd3da; }
 .scrim .sc-date { font-size: 3.4vw; color: #6c7280; margin-top: 10px; }
-.scrim.mode-off .sc-time, .scrim.mode-off .sc-date { visibility: hidden; }
+.scrim .sc-weather { font-size: 4.5vw; color: #9aa0ac; margin-top: 26px; }
+.scrim.mode-off .sc-time, .scrim.mode-off .sc-date,
+.scrim.mode-off .sc-weather { visibility: hidden; }
+
+.night-veil {
+  position: fixed; inset: 0; pointer-events: none;
+  z-index: 2147483647; background: rgba(70, 30, 5, 0.38);
+}
+.night-veil[hidden] { display: none; }
 
 .alarm {
   position: fixed; inset: 0; z-index: 2147483647;
@@ -112,12 +120,14 @@ button:active { filter: brightness(1.3); }
     <div class="scrim" hidden>
       <div class="sc-time"></div>
       <div class="sc-date"></div>
+      <div class="sc-weather"></div>
     </div>
     <div class="alarm" hidden>
       <div class="a-label"></div>
       <button class="a-dismiss">Dismiss</button>
       <button class="a-extend">+1 minute</button>
-    </div>`;
+    </div>
+    <div class="night-veil" hidden></div>`;
   shadow.appendChild(root);
   document.documentElement.appendChild(host);
 
@@ -269,6 +279,18 @@ button:active { filter: brightness(1.3); }
   $(".a-extend").onclick = () => { if (alarmTimerId) api(`/api/timers/${alarmTimerId}/extend`, { seconds: 60 }); hideAlarm(); };
 
   let scrimClockInterval = null;
+  let scrimWeatherInterval = null;
+
+  async function loadScrimWeather() {
+    let w = null;
+    try {
+      w = await (await fetch(BACKEND + "/api/weather")).json();
+    } catch { /* backend unreachable */ }
+    $(".sc-weather").textContent = w && w.configured && !w.error
+      ? `${w.emoji} ${Math.round(w.temp)}° · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
+      : "";
+  }
+
   function setDisplayState(state) {
     const scrim = $(".scrim");
     scrim.hidden = state === "active";
@@ -281,10 +303,22 @@ button:active { filter: brightness(1.3); }
       };
       tick();
       scrimClockInterval = setInterval(tick, 1000);
+      loadScrimWeather();
+      scrimWeatherInterval = setInterval(loadScrimWeather, 15 * 60 * 1000);
     } else if (scrim.hidden && scrimClockInterval) {
       clearInterval(scrimClockInterval);
       scrimClockInterval = null;
+      clearInterval(scrimWeatherInterval);
+      scrimWeatherInterval = null;
     }
+  }
+
+  // ---------------------------------------------------------- night dim
+
+  let nightNow = false;
+  let nightDimEnabled = true;
+  function applyNight() {
+    $(".night-veil").hidden = !(nightNow && nightDimEnabled);
   }
 
   // The scrim swallows the wake tap so it can't click something on the page.
@@ -301,6 +335,9 @@ button:active { filter: brightness(1.3); }
     if (type === "snapshot") {
       timers = data.timers;
       setDisplayState(data.display.state);
+      nightNow = !!data.display.night;
+      nightDimEnabled = !!data.settings.night_dim_enabled;
+      applyNight();
       const ring = timers.find((t) => t.state === "ringing");
       if (ring) showAlarm(ring); else hideAlarm();
     } else if (type === "timer.tick") {
@@ -316,6 +353,14 @@ button:active { filter: brightness(1.3); }
       hideAlarm();
     } else if (type === "display.state") {
       setDisplayState(data.state);
+    } else if (type === "night.state") {
+      nightNow = !!data.night;
+      applyNight();
+    } else if (type === "settings.updated") {
+      if ("night_dim_enabled" in data) {
+        nightDimEnabled = !!data.night_dim_enabled;
+        applyNight();
+      }
     } else if (type === "navigate") {
       location.href = data.url;
     }

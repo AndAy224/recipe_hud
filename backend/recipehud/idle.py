@@ -29,6 +29,7 @@ class IdleController:
         self.state = ACTIVE
         self.last_activity = time.monotonic()
         self._state_since = time.monotonic()
+        self._night: bool | None = None
         store.on_change(self._on_settings_change)
 
     # -- queries -------------------------------------------------------
@@ -88,6 +89,12 @@ class IdleController:
             await asyncio.sleep(1)
 
     async def _step(self) -> None:
+        # Night flip check runs before any early return, so the dim veil
+        # engages even while a timer inhibits blanking.
+        night = self._in_night_window()
+        if night != self._night:
+            self._night = night
+            await self.broadcast("night.state", {"night": night})
         # A ringing alarm must be seen/heard: force the display awake.
         if self.engine.has_ringing() and (self.state != ACTIVE or not self.display.is_on()):
             await self.wake()
@@ -97,7 +104,6 @@ class IdleController:
         now = time.monotonic()
         idle_for = now - self.last_activity
         in_state_for = now - self._state_since
-        night = self._in_night_window()
         if self.state == ACTIVE:
             if night:
                 if idle_for > self.store.get("night_idle_timeout_s"):

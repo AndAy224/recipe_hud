@@ -11,9 +11,19 @@ touch panel mounted portrait (720 wide × 2560 tall).
   minutes" become tap-to-start timer buttons. Cached, so it works offline.
 - **Timers** — multiple named timers, server-side (they survive page
   navigation), with a loud alarm and full-screen flash.
-- **Screen management** — idle → big clock → display off; wakes on touch;
-  night schedule; "keep awake" cooking mode; a running timer always keeps the
-  screen available.
+- **My Recipes** — star any clean-view recipe to keep it forever (offline,
+  survives the source site vanishing); browse from the launcher, add by URL
+  from your phone.
+- **Cook mode** — one step at a time in huge text with giant next/back
+  buttons, tap-to-start timers inline, ingredients peek panel; keeps the
+  screen awake while you cook.
+- **Screen management** — idle → big clock (with weather via Open-Meteo, no
+  API key) → display off; wakes on touch; night schedule with a warm dim
+  veil; "keep awake" cooking mode; a running timer always keeps the screen
+  available.
+- **Send-to-kiosk** — scan the QR on the launcher (📲) to open `/send` on
+  your phone; paste any recipe link and it opens on the kitchen display,
+  optionally straight into clean view.
 - **Admin panel** — manage sites, presets, timeouts and the display from any
   browser on your LAN: `http://<pi>.local:8000/admin` (default password
   `recipehud` — change it).
