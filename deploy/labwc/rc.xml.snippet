@@ -1,0 +1,10 @@
+<!--
+Merge into ~/.config/labwc/rc.xml inside <labwc_config>.
+
+Maps the USB touch panel's coordinates onto the (rotated) HDMI output, so
+touch follows the portrait transform automatically — no calibration matrix.
+
+Find the exact device name with:  libinput list-devices | grep -B1 touch
+(install.sh prints candidates during setup)
+-->
+<touch deviceName="REPLACE_WITH_TOUCH_DEVICE_NAME" mapToOutput="HDMI-A-1"/>

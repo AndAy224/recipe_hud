@@ -1,0 +1,51 @@
+/* Admin panel: phone/desktop friendly, function over form. */
+
+body { max-width: 720px; margin: 0 auto; padding: 1.2rem; user-select: auto; }
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 2rem 0 0.8rem; }
+
+section { margin-bottom: 1rem; }
+
+.card {
+  background: var(--bg-raised); border-radius: var(--radius);
+  padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.row { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; }
+
+label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.95rem; color: var(--muted); }
+label.check { flex-direction: row; align-items: center; color: var(--fg); }
+
+input, select {
+  font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid #3a3f4a; border-radius: 10px;
+  padding: 0.55rem 0.7rem; min-height: 44px;
+}
+input[type="checkbox"] { min-height: auto; width: 22px; height: 22px; }
+input[type="color"] { padding: 0.15rem; width: 60px; }
+input[type="range"] { padding: 0; }
+input.narrow { width: 90px; }
+#navigate-url { flex: 1; }
+
+button { min-height: 48px; font-size: 0.95rem; }
+
+.item {
+  display: flex; align-items: center; gap: 0.6rem;
+  background: var(--bg-raised); border-radius: 12px;
+  padding: 0.6rem 0.8rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+}
+.item .grow { flex: 1; min-width: 140px; }
+.item .sub { color: var(--muted); font-size: 0.85rem; word-break: break-all; }
+.item button { min-height: 40px; padding: 0.3rem 0.7rem; background: var(--bg); }
+.item button.danger { background: var(--danger); }
+
+.timer-live {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg-raised); border-radius: 12px;
+  padding: 0.6rem 0.9rem; margin-bottom: 0.4rem;
+}
+.timer-live .ringing { color: var(--danger); font-weight: 700; }
+
+#settings-saved { color: var(--accent-2); }

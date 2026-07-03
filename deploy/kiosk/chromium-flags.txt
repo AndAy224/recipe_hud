@@ -1,0 +1,22 @@
+# Source of truth for the kiosk Chromium flags (used by start-kiosk.sh).
+#
+# --kiosk http://localhost:8000/         full-screen, no chrome UI, launcher as home
+# --user-data-dir=~/.config/recipehud-chromium
+#       dedicated persistent profile: cookie-banner dismissals on recipe sites
+#       stick across reboots; also gives a unique string for pkill -f
+# --load-extension=/opt/recipehud/extension
+#       loads the Recipe HUD overlay (works on Pi OS Chromium; removed only in
+#       branded Chrome 137+). Fallback if ever removed: open chrome://extensions
+#       once in the kiosk profile and "Load unpacked" — it persists.
+# --autoplay-policy=no-user-gesture-required
+#       alarm sound must play without a tap
+# --noerrdialogs --disable-infobars --disable-session-crashed-bubble
+# --hide-crash-restore-bubble
+#       no popups/bubbles ever visible in the kitchen
+# --disable-features=Translate           no translate prompts on foreign recipes
+# --disable-component-update --check-for-update-interval=31536000
+#       no surprise component updates mid-cook
+# --overscroll-history-navigation=0      swipe must scroll, not go back
+# --touch-events=enabled
+# --ozone-platform=wayland               native Wayland (labwc)
+# --start-maximized

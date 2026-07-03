@@ -1,0 +1,105 @@
+/* Layout tuned for 720 x 2560 portrait touch. */
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 1.2rem 1.2rem 0;
+}
+
+header { text-align: center; padding: 1.2rem 0 0.6rem; }
+#clock { font-size: 6rem; font-weight: 200; line-height: 1; letter-spacing: 0.02em; }
+#date { color: var(--muted); font-size: 1.4rem; margin-top: 0.4rem; }
+
+h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 1.4rem 0 0.7rem; }
+
+/* Active timers strip */
+#timers-strip { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
+.timer-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-raised);
+  border-left: 8px solid var(--accent-2);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.2rem;
+  font-size: 1.5rem;
+}
+.timer-chip .t-label { font-weight: 600; }
+.timer-chip .t-time { font-variant-numeric: tabular-nums; font-size: 1.9rem; }
+.timer-chip.paused { border-left-color: var(--muted); opacity: 0.75; }
+.timer-chip.ringing { border-left-color: var(--danger); animation: chip-pulse 1s infinite; }
+@keyframes chip-pulse { 50% { background: var(--danger); } }
+
+/* Site tiles */
+.tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+.tile {
+  min-height: 150px;
+  border-radius: var(--radius);
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  padding: 1rem;
+  color: #fff;
+  text-align: left;
+}
+.tile .tile-icon { font-size: 2.4rem; }
+.tile .tile-name { font-size: 1.35rem; font-weight: 700; line-height: 1.15; }
+.tile .tile-mode { font-size: 0.85rem; opacity: 0.8; }
+
+main { flex: 1; padding-bottom: 1rem; }
+#no-sites { color: var(--muted); text-align: center; line-height: 1.6; }
+
+footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.9rem 0 1.2rem;
+  background: linear-gradient(transparent, var(--bg) 30%);
+}
+footer button { flex: 1; font-size: 1.25rem; min-height: 76px; }
+#keep-awake.on { background: var(--accent-2); color: #10241c; }
+
+/* Bottom sheets */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+}
+.sheet[hidden] { display: none; }
+.sheet-body {
+  width: 100%;
+  background: var(--bg-raised);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 1.4rem 1.2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.sheet-body h2 { margin: 0; }
+
+#preset-buttons, #label-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+#preset-buttons button { font-size: 1.1rem; }
+#label-chips button { min-height: 52px; background: var(--bg); }
+#label-chips button.selected { background: var(--accent); color: #fff; }
+
+.keypad-display {
+  font-size: 4rem;
+  font-weight: 300;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 0.4rem 0;
+}
+
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+.keypad button { font-size: 1.9rem; min-height: 84px; background: var(--bg); }
+
+.sheet-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.sheet-actions button { flex: 1; font-size: 1.15rem; }

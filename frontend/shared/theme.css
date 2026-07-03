@@ -1,0 +1,83 @@
+:root {
+  --bg: #14161a;
+  --bg-raised: #1e2128;
+  --fg: #f2f0eb;
+  --muted: #9aa0ac;
+  --accent: #e07a5f;
+  --accent-2: #81b29a;
+  --danger: #d9534f;
+  --radius: 18px;
+  --tap-target: 64px;
+  font-size: 20px;
+}
+
+[data-theme="light"] {
+  --bg: #f6f3ee;
+  --bg-raised: #ffffff;
+  --fg: #22242a;
+  --muted: #6c7280;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--bg-raised);
+  border: none;
+  border-radius: var(--radius);
+  min-height: var(--tap-target);
+  padding: 0.5rem 1.1rem;
+  cursor: pointer;
+}
+
+button:active { filter: brightness(1.25); }
+
+button.primary { background: var(--accent); color: #fff; }
+button.danger { background: var(--danger); color: #fff; }
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: #000;
+}
+
+.scrim.visible { display: flex; }
+
+.scrim .scrim-clock { font-size: 7rem; font-weight: 200; color: #cfd3da; }
+.scrim .scrim-date { font-size: 1.6rem; color: #6c7280; margin-top: 0.6rem; }
+.scrim.mode-off .scrim-clock, .scrim.mode-off .scrim-date { visibility: hidden; }
+
+.alarm-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: alarm-pulse 1s infinite;
+}
+
+.alarm-flash.visible { display: flex; }
+.alarm-flash .alarm-label { font-size: 3rem; font-weight: 700; color: #fff; text-align: center; }
+
+@keyframes alarm-pulse {
+  0%, 100% { background: rgba(217, 83, 79, 0.96); }
+  50% { background: rgba(140, 30, 30, 0.96); }
+}

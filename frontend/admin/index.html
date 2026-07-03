@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe HUD — Admin</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <h1>Recipe HUD Admin</h1>
+
+  <section id="live-section">
+    <h2>Live</h2>
+    <p id="live-display"></p>
+    <div id="live-timers"></div>
+    <div class="row">
+      <button data-display="on">Display on</button>
+      <button data-display="off">Display off</button>
+      <button data-display="show-clock">Show clock</button>
+      <button id="kiosk-restart" class="danger">Restart kiosk</button>
+    </div>
+    <div class="row">
+      <input id="navigate-url" type="url" placeholder="https://… open on kiosk">
+      <button id="navigate-go" class="primary">Open on kiosk</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sites</h2>
+    <div id="sites-list"></div>
+    <form id="site-add" class="card">
+      <strong>Add site</strong>
+      <input name="name" placeholder="Display name" required>
+      <input name="url" type="url" placeholder="https://…" required>
+      <div class="row">
+        <label>Color <input name="color" type="color" value="#e07a5f"></label>
+        <label>Icon <input name="icon" placeholder="🍝" maxlength="8" size="4"></label>
+        <label>Open as
+          <select name="open_mode">
+            <option value="direct">Original site</option>
+            <option value="clean">Clean view</option>
+          </select>
+        </label>
+      </div>
+      <button class="primary">Add site</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Timer presets</h2>
+    <div id="presets-list"></div>
+    <form id="preset-add" class="card row">
+      <input name="label" placeholder="Label (e.g. Pasta)" required>
+      <input name="minutes" type="number" min="0" step="1" placeholder="min" required class="narrow">
+      <input name="seconds" type="number" min="0" max="59" step="1" placeholder="sec" value="0" class="narrow">
+      <button class="primary">Add</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Display &amp; idle settings</h2>
+    <form id="settings-form" class="card">
+      <label>Idle timeout before clock screen (seconds)
+        <input name="idle_timeout_s" type="number" min="10"></label>
+      <label>Clock screen before display off (seconds)
+        <input name="clock_to_off_s" type="number" min="10"></label>
+      <label class="check"><input name="night_mode_enabled" type="checkbox"> Night mode (shorter timeout, straight to off)</label>
+      <div class="row">
+        <label>Night starts <input name="night_off_start" type="time"></label>
+        <label>Night ends <input name="night_off_end" type="time"></label>
+        <label>Night idle timeout (s) <input name="night_idle_timeout_s" type="number" min="5" class="narrow"></label>
+      </div>
+      <label>Alarm volume <span id="volume-value"></span>
+        <input name="alarm_volume" type="range" min="0" max="100">
+      </label>
+      <button type="button" id="test-alarm">Test alarm sound</button>
+      <label>Theme
+        <select name="theme"><option value="dark">Dark</option><option value="light">Light</option></select>
+      </label>
+      <label>Display output name (wlopm) <input name="display_output"></label>
+      <label>Touch device override (optional, /dev/input/eventN) <input name="touch_device"></label>
+      <button class="primary">Save settings</button>
+      <span id="settings-saved" hidden>✓ saved</span>
+    </form>
+  </section>
+
+  <section>
+    <h2>Admin password</h2>
+    <form id="password-form" class="card row">
+      <input name="password" type="password" placeholder="New password (min 4 chars)" minlength="4" required>
+      <button class="primary">Change password</button>
+    </form>
+  </section>
+
+  <script type="module" src="/admin/admin.js"></script>
+</body>
+</html>

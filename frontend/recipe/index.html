@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/recipe/recipe.css">
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Fetching recipe…</p>
+  </div>
+
+  <div id="error" hidden>
+    <h1>Couldn't extract this page</h1>
+    <p id="error-detail"></p>
+    <div class="error-actions">
+      <button id="error-original" class="primary">Open original page</button>
+      <button id="error-home">Home</button>
+    </div>
+  </div>
+
+  <article id="recipe" hidden>
+    <img id="hero" alt="" hidden>
+    <h1 id="title"></h1>
+    <p id="meta"></p>
+
+    <section id="ingredients-section" hidden>
+      <h2>Ingredients</h2>
+      <ul id="ingredients"></ul>
+    </section>
+
+    <section>
+      <h2 id="steps-heading">Steps</h2>
+      <ol id="steps"></ol>
+    </section>
+
+    <footer>
+      <button id="open-original">Original page ↗</button>
+      <button id="refresh">↻ Re-fetch</button>
+    </footer>
+  </article>
+
+  <script type="module" src="/recipe/recipe.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe HUD</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/launcher.css">
+</head>
+<body>
+  <header>
+    <div id="clock">--:--</div>
+    <div id="date"></div>
+  </header>
+
+  <section id="timers-strip" hidden></section>
+
+  <section id="recents" hidden>
+    <h2>Recent</h2>
+    <div id="recent-tiles" class="tile-grid"></div>
+  </section>
+
+  <main>
+    <h2>Recipes &amp; Sites</h2>
+    <div id="tiles" class="tile-grid"></div>
+    <p id="no-sites" hidden>No sites yet — add some from the admin panel on another device:<br><span id="admin-hint"></span></p>
+  </main>
+
+  <footer>
+    <button id="keep-awake">🍳 Keep awake</button>
+    <button id="new-timer" class="primary">⏱ New timer</button>
+  </footer>
+
+  <!-- New-timer sheet: preset buttons + microwave-style keypad -->
+  <div id="timer-sheet" class="sheet" hidden>
+    <div class="sheet-body">
+      <h2>New timer</h2>
+      <div id="preset-buttons"></div>
+      <div class="keypad-display" id="keypad-display">0:00</div>
+      <div id="label-chips"></div>
+      <div class="keypad" id="keypad"></div>
+      <div class="sheet-actions">
+        <button id="timer-cancel">Cancel</button>
+        <button id="timer-start" class="primary">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Running-timer detail sheet -->
+  <div id="detail-sheet" class="sheet" hidden>
+    <div class="sheet-body">
+      <h2 id="detail-label"></h2>
+      <div class="keypad-display" id="detail-remaining"></div>
+      <div class="sheet-actions">
+        <button id="detail-pause"></button>
+        <button id="detail-extend">+1 min</button>
+        <button id="detail-cancel" class="danger">Cancel timer</button>
+        <button id="detail-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fallback idle scrim + alarm flash (used when the extension is absent, e.g. dev) -->
+  <div id="scrim" class="scrim">
+    <div class="scrim-clock" id="scrim-clock"></div>
+    <div class="scrim-date" id="scrim-date"></div>
+  </div>
+  <div id="alarm-flash" class="alarm-flash">
+    <div class="alarm-label" id="alarm-label"></div>
+    <button id="alarm-dismiss" class="primary">Dismiss</button>
+  </div>
+
+  <script type="module" src="/launcher.js"></script>
+</body>
+</html>
