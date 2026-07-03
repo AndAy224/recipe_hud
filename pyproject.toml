@@ -13,6 +13,10 @@ dependencies = [
     "readability-lxml>=0.8.1",
     "segno>=1.6",
     "python-multipart>=0.0.9",
+    # Defeats TLS fingerprinting on bot-blocked recipe sites (AllRecipes etc.);
+    # no prebuilt wheels for 32-bit ARM, hence the marker — the extractor
+    # degrades gracefully without it.
+    "curl-cffi>=0.7; platform_machine != 'armv7l'",
     "evdev>=1.6; sys_platform == 'linux'",
 ]
 

@@ -17,9 +17,36 @@ from .settings_store import SettingsStore
 log = logging.getLogger(__name__)
 
 USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
+
+# A full browser header set: several sites (e.g. Food Network) 403 anything
+# that only sends a User-Agent.
+BROWSER_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,"
+              "image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+# Sites behind TLS fingerprinting (AllRecipes, Serious Eats, Simply Recipes…)
+# 403 any plain-Python client no matter the headers; curl_cffi impersonates a
+# real Chrome handshake. Optional: no prebuilt wheels on 32-bit ARM.
+try:
+    from curl_cffi.requests import AsyncSession as _CurlSession
+except ImportError:
+    _CurlSession = None
+
+RETRY_IMPERSONATED = {401, 403, 406, 429}
 
 
 class ExtractionError(Exception):
@@ -54,12 +81,25 @@ async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = 
 
 
 async def _fetch(url: str) -> str:
-    async with httpx.AsyncClient(
-        headers={"User-Agent": USER_AGENT, "Accept-Language": "en"},
-        follow_redirects=True,
-        timeout=20,
-    ) as client:
-        resp = await client.get(url)
+    try:
+        async with httpx.AsyncClient(
+            headers=BROWSER_HEADERS, follow_redirects=True, timeout=20,
+        ) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            return resp.text
+    except httpx.HTTPStatusError as exc:
+        if _CurlSession is None or exc.response.status_code not in RETRY_IMPERSONATED:
+            raise
+        log.info("%s -> %d; retrying with browser impersonation",
+                 url, exc.response.status_code)
+        return await _fetch_impersonated(url)
+
+
+async def _fetch_impersonated(url: str) -> str:
+    async with _CurlSession() as session:
+        resp = await session.get(url, impersonate="chrome", timeout=20,
+                                 allow_redirects=True)
         resp.raise_for_status()
         return resp.text
 
@@ -93,12 +133,19 @@ def _parse_recipe(html: str, url: str) -> dict | None:
         except Exception:
             return default
 
+    def split_lines(text):
+        return [line.strip() for line in (text or "").split("\n") if line.strip()]
+
+    # Site-specific scrapers break when sites redesign (e.g. SimplyRecipes'
+    # instructions selector); the page's schema.org data is usually still
+    # intact, so fall back to scraper.schema for anything that comes up empty.
+    schema = getattr(scraper, "schema", None)
     ingredients = grab(scraper.ingredients, [])
-    steps = grab(scraper.instructions_list) or [
-        line.strip()
-        for line in (grab(scraper.instructions, "") or "").split("\n")
-        if line.strip()
-    ]
+    if not ingredients and schema:
+        ingredients = grab(schema.ingredients, [])
+    steps = grab(scraper.instructions_list) or split_lines(grab(scraper.instructions))
+    if not steps and schema:
+        steps = split_lines(grab(schema.instructions))
     if not ingredients and not steps:
         return None
     total_time_min = grab(scraper.total_time)
@@ -186,13 +233,21 @@ async def snapshot_image(db: Database, url: str) -> str | None:
     if row["image_local"]:
         return local_image_url(row)
     try:
-        async with httpx.AsyncClient(
-            headers={"User-Agent": USER_AGENT, "Referer": url},
-            follow_redirects=True,
-            timeout=20,
-        ) as client:
-            resp = await client.get(row["image_url"])
-            resp.raise_for_status()
+        try:
+            async with httpx.AsyncClient(
+                headers={"User-Agent": USER_AGENT, "Referer": url},
+                follow_redirects=True,
+                timeout=20,
+            ) as client:
+                resp = await client.get(row["image_url"])
+                resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if _CurlSession is None or exc.response.status_code not in RETRY_IMPERSONATED:
+                raise
+            async with _CurlSession() as session:
+                resp = await session.get(row["image_url"], impersonate="chrome",
+                                         timeout=20, allow_redirects=True)
+                resp.raise_for_status()
         content_type = resp.headers.get("content-type", "").split(";")[0].strip()
         ext = IMAGE_EXT.get(content_type)
         if not ext or len(resp.content) > IMAGE_MAX_BYTES:

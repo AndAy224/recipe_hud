@@ -59,7 +59,7 @@ The install script prints candidate device names (or run
 | No alarm sound | Wrong audio output (`sudo raspi-config` → System → Audio). Test in admin → "Test alarm sound" from the kiosk itself. |
 | Overlay missing on pages | Chromium must load the extension: check `ps aux | grep load-extension`. If your Chromium build removed `--load-extension`, open `chrome://extensions` once in the kiosk profile and Load unpacked from `/opt/recipehud/extension` — it persists in the profile. |
 | Kiosk shows an error page at boot | Backend not up yet is handled (start script waits for `/healthz`); check `journalctl -u recipehud-backend -e`. |
-| Clean view fails on a site | Some sites block server-side fetches (Cloudflare). Keep that site on "direct" open mode. |
+| Clean view fails on a site | Most bot-blockers are already defeated (browser headers + `curl_cffi` TLS impersonation). If a site still refuses or serves no recipe data, keep it on "direct" open mode. On 32-bit Pi OS `curl_cffi` has no prebuilt wheel and is skipped — use 64-bit Pi OS for best extraction coverage. |
 
 ## Updating
 

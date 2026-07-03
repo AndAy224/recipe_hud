@@ -57,6 +57,15 @@ back to readability text paragraphs. Results cache in `recipe_cache` — stale
 copies are served if a re-fetch fails, so saved recipes work offline. The
 frontend turns durations found in step text into tap-to-start timer buttons.
 
+Fetching is hardened in layers (verified against 18 popular sites —
+`scripts/test_extraction.py`): a full Chrome header set first (some sites
+403 a bare User-Agent), then a `curl_cffi` retry with a real Chrome TLS
+fingerprint for sites behind JA3 fingerprinting (AllRecipes, Serious Eats,
+Simply Recipes…). Parsing also falls back from the site-specific scraper to
+the page's raw schema.org data when a redesign breaks the scraper's
+selectors. Sites that serve no structured data at all (e.g. Smitten Kitchen)
+land on the readable-article view by design.
+
 **Auth model** (documented tradeoff for a home LAN): requests from localhost
 (the kiosk) are implicitly trusted; mutating admin routes and `/admin` require
 HTTP Basic from other hosts. Read/timer routes are open on the LAN, as are
