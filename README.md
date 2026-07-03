@@ -28,6 +28,18 @@ touch panel mounted portrait (720 wide × 2560 tall).
   browser on your LAN: `http://<pi>.local:8000/admin` (default password
   `recipehud` — change it).
 
+## Screenshots
+
+| Launcher | Clean recipe view | Cook mode |
+|---|---|---|
+| ![Launcher with clock, weather, live timers, My Recipes and site tiles](docs/screenshots/launcher.png) | ![Ad-free extracted recipe with checkable ingredients](docs/screenshots/recipe.png) | ![One step at a time with giant nav buttons](docs/screenshots/cookmode.png) |
+
+| Idle clock | New timer keypad | Send from phone |
+|---|---|---|
+| ![Clock screen with weather](docs/screenshots/clock.png) | ![Presets and microwave-style keypad](docs/screenshots/timer-sheet.png) | ![Phone page that pushes a URL to the kiosk](docs/screenshots/send.png) |
+
+![Admin panel: live view, sites, recipes, settings](docs/screenshots/admin.png)
+
 ## Development (any OS, no Pi needed)
 
 ```powershell

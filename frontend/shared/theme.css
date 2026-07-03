@@ -20,6 +20,9 @@
 
 * { box-sizing: border-box; }
 
+/* Guard: an id/class display rule must never beat the hidden attribute. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
