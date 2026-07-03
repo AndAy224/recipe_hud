@@ -35,6 +35,10 @@ touch panel mounted portrait (720 wide × 2560 tall).
 |---|---|---|
 | ![Launcher with clock, weather, live timers, My Recipes and site tiles](docs/screenshots/launcher.png) | ![Ad-free extracted recipe with checkable ingredients](docs/screenshots/recipe.png) | ![One step at a time with giant nav buttons](docs/screenshots/cookmode.png) |
 
+| Browsing a real site | Timer panel on any site |
+|---|---|
+| ![A recipe site as-is, with the floating overlay toolbar on the right edge](docs/screenshots/site-overlay.png) | ![The extension's timer panel open over the site: live timers, presets, keypad](docs/screenshots/site-overlay-panel.png) |
+
 | Idle clock | New timer keypad | Send from phone |
 |---|---|---|
 | ![Clock screen with weather](docs/screenshots/clock.png) | ![Presets and microwave-style keypad](docs/screenshots/timer-sheet.png) | ![Phone page that pushes a URL to the kiosk](docs/screenshots/send.png) |

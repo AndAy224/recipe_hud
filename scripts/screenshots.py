@@ -8,8 +8,47 @@ import httpx
 from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:8000"
-OUT = Path(__file__).resolve().parents[1] / "docs" / "screenshots"
+REPO = Path(__file__).resolve().parents[1]
+OUT = REPO / "docs" / "screenshots"
 RECIPE_URL = "https://www.budgetbytes.com/dragon-noodles/"
+
+# Playwright's headless shell can't load MV3 extensions, so for the
+# "overlay on a real site" shots we inject the actual content script with a
+# stubbed chrome.runtime port and feed it a real snapshot from the backend —
+# rendering-wise identical to the extension.
+CHROME_STUB = """
+window.__rhudListeners = [];
+// The overlay uses a closed shadow root; capture a reference so the
+// screenshot script can click its buttons.
+const origAttachShadow = Element.prototype.attachShadow;
+Element.prototype.attachShadow = function (init) {
+  const root = origAttachShadow.call(this, init);
+  if (!window.__rhudRoot) window.__rhudRoot = root;
+  return root;
+};
+window.chrome = {
+  runtime: {
+    connect: () => ({
+      onMessage: { addListener: (fn) => window.__rhudListeners.push(fn) },
+      onDisconnect: { addListener: () => {} },
+      postMessage: () => {},
+    }),
+  },
+};
+"""
+
+# The page's CSP blocks main-world fetches to localhost (a real extension
+# content script isn't subject to it), so the panel's preset row comes back
+# empty in this harness; fill it with what the backend would have returned.
+FILL_PRESETS = """
+const presets = [["Soft eggs", "6:00"], ["Pasta", "9:00"], ["Rice", "15:00"], ["Pizza", "12:00"]];
+const row = window.__rhudRoot.querySelector(".presets");
+row.replaceChildren(...presets.map(([label, time]) => {
+  const btn = document.createElement("button");
+  btn.textContent = `${label} ${time}`;
+  return btn;
+}));
+"""
 
 KIOSK = {"width": 720, "height": 1280}
 PHONE = {"width": 400, "height": 820}
@@ -78,6 +117,36 @@ def main() -> None:
             page.click("#cook-mode-btn")
             page.wait_for_timeout(500)
             shot(page, "cookmode.png")
+            page.close()
+
+            # A real recipe site with the extension overlay (toolbar + panel)
+            snapshot = {
+                "timers": httpx.get(BASE + "/api/timers", timeout=10).json(),
+                "display": {"state": "active", "night": False},
+                "settings": {"night_dim_enabled": True, "alarm_volume": 80},
+            }
+            overlay_js = (REPO / "extension" / "content" / "overlay.js").read_text(encoding="utf-8")
+            page = browser.new_page(viewport=KIOSK)
+            page.goto(RECIPE_URL, wait_until="domcontentloaded")
+            page.wait_for_timeout(4000)  # late-loading site chrome
+            # Consent banners would dominate the shot; drop common CMP roots.
+            page.evaluate("""document.querySelectorAll(
+                '[id*=onetrust], [id*=consent], [class*=consent], [id*=cmp], [class*=cookie]'
+            ).forEach(el => el.remove())""")
+            page.evaluate(CHROME_STUB)
+            page.evaluate(overlay_js)
+            page.evaluate(
+                "snap => window.__rhudListeners.forEach(fn => fn({type: 'snapshot', data: snap}))",
+                snapshot,
+            )
+            page.wait_for_timeout(400)
+            shot(page, "site-overlay.png")
+            # Invoke the handler directly: the site's own capture-phase click
+            # interception (CMP left unanswered in headless) swallows real clicks.
+            page.evaluate("window.__rhudRoot.querySelector('.tb-timers').onclick()")
+            page.wait_for_timeout(800)
+            page.evaluate(FILL_PRESETS)
+            shot(page, "site-overlay-panel.png")
             page.close()
 
             # Admin panel
