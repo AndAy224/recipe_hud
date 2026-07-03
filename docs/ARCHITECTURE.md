@@ -79,6 +79,19 @@ broadcasts `night.state`; every UI raises a `pointer-events: none` warm veil
 (never a CSS `filter` on an ancestor — that would re-parent every
 `position: fixed` scrim). Requires night mode to be enabled.
 
+**Ops (admin → System)**: health via stdlib collectors (`sysinfo.py`;
+throttle state read from the firmware sysfs node with a `vcgencmd` fallback);
+logs from an in-memory ring handler (`log_buffer.py`). Backup = `VACUUM INTO`
+(consistent single-file copy under WAL, no sidecars) zipped with `media/`.
+Restore is staged as `data/restore-pending.zip` and applied at the NEXT
+startup before the DB opens — the live `-wal`/`-shm` are deleted first and
+the old DB is kept as `.pre-restore`. Restarting the backend never needs
+sudo: the process exits itself and systemd's `Restart=always` revives it.
+Self-update (`deploy/update.sh`) runs `git reset --hard origin/<branch>` +
+`pip install` in `/opt/recipehud` (a real git checkout since install.sh
+rsyncs `.git`), then kills the main pid — a pip/git failure aborts before
+the kill, leaving the old code running.
+
 ## WebSocket protocol
 
 `GET /ws?role=launcher|overlay|admin` — server → client events; all commands

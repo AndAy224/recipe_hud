@@ -69,13 +69,32 @@ function openSite(site) {
 
 // ----------------------------------------------------------- my recipes
 
+let savedRecipes = [];
+let activeTag = null;
+
 async function loadMyRecipes() {
-  let saved = [];
   try {
-    saved = await (await fetch("/api/recipe/saved")).json();
+    savedRecipes = await (await fetch("/api/recipe/saved")).json();
   } catch { /* backend unreachable */ }
-  $("my-recipes").hidden = saved.length === 0;
-  $("recipe-tiles").replaceChildren(...saved.map((r) => {
+  renderMyRecipes();
+}
+
+function renderMyRecipes() {
+  $("my-recipes").hidden = savedRecipes.length === 0;
+  const tags = [...new Set(savedRecipes.flatMap((r) => r.tags || []))].sort();
+  if (activeTag && !tags.includes(activeTag)) activeTag = null;
+  $("recipe-tag-chips").hidden = tags.length === 0;
+  $("recipe-tag-chips").replaceChildren(...[null, ...tags].map((tag) => {
+    const btn = document.createElement("button");
+    btn.textContent = tag ?? "All";
+    btn.classList.toggle("active", tag === activeTag);
+    btn.onclick = () => { activeTag = tag; renderMyRecipes(); };
+    return btn;
+  }));
+  const shown = activeTag
+    ? savedRecipes.filter((r) => (r.tags || []).includes(activeTag))
+    : savedRecipes;
+  $("recipe-tiles").replaceChildren(...shown.map((r) => {
     const btn = document.createElement("button");
     btn.className = "recipe-tile";
     if (r.image_url) btn.style.backgroundImage = `url("${r.image_url}")`;

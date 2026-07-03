@@ -14,7 +14,14 @@ touch panel mounted portrait (720 wide × 2560 tall).
 - **My Recipes** — star any clean-view recipe to keep a fully self-contained
   snapshot forever: text and photo are stored locally, so it works offline
   and survives the source site changing or vanishing. Browse from the
-  launcher, add by URL from your phone.
+  launcher, add by URL from your phone, organize with tags (tap-to-filter
+  chips on the launcher, search in admin).
+- **Recipe scaling** — ½×/2×/3× buttons on the clean view multiply
+  ingredient quantities (fractions, ranges and unicode ½-style amounts all
+  handled; ambiguous lines are left alone rather than mis-scaled).
+- **System panel** — Pi health at a glance (CPU temp/throttling, disk,
+  memory, uptime), one-click backup download and restore, one-click app
+  update, log viewer, restart buttons — all from the admin page.
 - **Cook mode** — one step at a time in huge text with giant next/back
   buttons, tap-to-start timers inline, ingredients peek panel; keeps the
   screen awake while you cook.

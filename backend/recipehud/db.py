@@ -2,7 +2,7 @@ from pathlib import Path
 
 import aiosqlite
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 
@@ -38,6 +38,11 @@ class Database:
             await self.conn.execute(
                 "ALTER TABLE recipe_cache ADD COLUMN image_local TEXT")
             await self.conn.execute("PRAGMA user_version = 3")
+            await self.conn.commit()
+        if version < 4:
+            await self.conn.execute(
+                "ALTER TABLE recipe_cache ADD COLUMN tags TEXT NOT NULL DEFAULT ''")
+            await self.conn.execute("PRAGMA user_version = 4")
             await self.conn.commit()
 
     async def close(self) -> None:

@@ -26,10 +26,14 @@
     <img id="hero" alt="" hidden>
     <h1 id="title"></h1>
     <p id="meta"></p>
+    <p id="tags" hidden></p>
     <button id="cook-mode-btn" class="primary" hidden>👨‍🍳 Cook mode</button>
 
     <section id="ingredients-section" hidden>
-      <h2>Ingredients</h2>
+      <div class="ing-head">
+        <h2>Ingredients</h2>
+        <div class="scale-ctl" id="scale-main"></div>
+      </div>
       <ul id="ingredients"></ul>
     </section>
 
@@ -55,6 +59,7 @@
     <button id="cm-ing-toggle">Ingredients ▲</button>
     <div id="cm-ingredients" hidden>
       <button id="cm-ing-close">Ingredients ▼</button>
+      <div class="scale-ctl" id="scale-cm"></div>
       <ul id="cm-ing-list"></ul>
     </div>
     <div id="cm-nav">

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import input_watch
+from . import backup, input_watch, log_buffer
 from .api import (
     debug, display, recipe, send, settings as settings_api, sites, system, timers, weather,
 )
@@ -22,11 +22,14 @@ from .timer_engine import TimerEngine
 from .ws import Hub
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+logging.getLogger().addHandler(log_buffer.ring)
 log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # A staged restore must swap the DB before it is opened.
+    backup.apply_pending_restore(CONFIG)
     db = Database(CONFIG.db_path)
     await db.connect()
     store = SettingsStore(db)

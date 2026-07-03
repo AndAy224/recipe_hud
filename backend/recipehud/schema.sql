@@ -44,5 +44,6 @@ CREATE TABLE recipe_cache (
     fetched_at TEXT NOT NULL,
     saved INTEGER NOT NULL DEFAULT 0,
     saved_at TEXT,
-    image_local TEXT
+    image_local TEXT,
+    tags TEXT NOT NULL DEFAULT ''
 );

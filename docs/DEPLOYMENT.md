@@ -63,8 +63,27 @@ The install script prints candidate device names (or run
 
 ## Updating
 
+Preferred: admin panel → System → **Update app**. It fetches the latest
+code into `/opt/recipehud`, reinstalls dependencies, and restarts the
+backend (running timers survive; the kiosk reconnects in seconds). Any local
+edits made directly in `/opt/recipehud` are discarded — the appliance always
+matches the repository. Note: the update button works after the first
+`install.sh` run that delivered the git checkout; older installs need one
+manual re-run of `install.sh`.
+
+Manual fallback:
+
 ```bash
 cd ~/recipe_hud && git pull && bash deploy/install.sh
 sudo systemctl restart recipehud-backend
 # then admin panel → Restart kiosk (or reboot)
 ```
+
+## Backup & restore
+
+Admin panel → System → **Download backup** produces a zip of the database
+(sites, settings, presets, saved recipes + tags) and all saved-recipe
+images. **Restore backup…** uploads one, validates it (integrity check,
+schema compatibility), and applies it on an automatic restart; the previous
+database is kept on the Pi as `recipehud.db.pre-restore` just in case.
+Restores replace everything — do a fresh backup first if unsure.

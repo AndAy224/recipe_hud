@@ -18,10 +18,13 @@ sudo apt-get install -y --no-install-recommends \
 echo "-- sync repo to $TARGET"
 if [ "$REPO_DIR" != "$TARGET" ]; then
     sudo mkdir -p "$TARGET"
-    sudo rsync -a --delete --exclude .venv --exclude data --exclude .git \
+    # .git is included on purpose: the admin panel's self-update button runs
+    # `git fetch` in /opt/recipehud (see deploy/update.sh).
+    sudo rsync -a --delete --exclude .venv --exclude data \
         "$REPO_DIR/" "$TARGET/"
     sudo chown -R "$USER_NAME:$USER_NAME" "$TARGET"
 fi
+chmod +x "$TARGET/deploy/update.sh" "$TARGET/deploy/kiosk/start-kiosk.sh"
 
 echo "-- python venv"
 if [ ! -d "$TARGET/.venv" ]; then

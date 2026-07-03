@@ -26,6 +26,26 @@
     </div>
   </section>
 
+  <section id="system-section">
+    <h2>System</h2>
+    <div id="health-grid" class="card"></div>
+    <div class="row">
+      <a href="/api/system/backup" download><button type="button">⬇ Download backup</button></a>
+      <label class="file-btn">
+        <input id="restore-file" type="file" accept=".zip" hidden>
+        <button type="button" id="restore-btn">⬆ Restore backup…</button>
+      </label>
+      <button id="update-btn">🔄 Update app</button>
+      <button id="backend-restart">Restart backend</button>
+    </div>
+    <p id="system-status"></p>
+    <details>
+      <summary>Recent logs</summary>
+      <button id="logs-refresh">Refresh</button>
+      <pre id="sys-logs"></pre>
+    </details>
+  </section>
+
   <section>
     <h2>Sites</h2>
     <div id="sites-list"></div>
@@ -49,6 +69,7 @@
 
   <section>
     <h2>My Recipes</h2>
+    <input id="recipe-search" placeholder="Filter by title, site or tag…">
     <div id="recipes-list"></div>
     <form id="recipe-add" class="card row">
       <input name="url" type="url" placeholder="https://… recipe URL" required>

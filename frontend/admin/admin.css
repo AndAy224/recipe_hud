@@ -49,3 +49,23 @@ button { min-height: 48px; font-size: 0.95rem; }
 .timer-live .ringing { color: var(--danger); font-weight: 700; }
 
 #settings-saved { color: var(--accent-2); }
+
+/* System section */
+#system-section a { text-decoration: none; color: inherit; }
+#health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.7rem;
+}
+#health-grid .stat { display: flex; flex-direction: column; gap: 0.15rem; }
+#health-grid .stat .k { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+#health-grid .stat .v { font-size: 1.05rem; }
+#health-grid .stat .v.warn { color: var(--danger); font-weight: 700; }
+#system-status { min-height: 1.3em; color: var(--accent-2); }
+#system-status.err { color: var(--danger); }
+#sys-logs {
+  background: var(--bg); border-radius: 10px; padding: 0.7rem;
+  font-size: 0.78rem; line-height: 1.5; overflow-x: auto;
+  max-height: 320px; overflow-y: auto; white-space: pre-wrap;
+}
+details summary { cursor: pointer; color: var(--muted); margin: 0.6rem 0; }

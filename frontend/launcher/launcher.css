@@ -55,6 +55,18 @@ h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-s
 .tile .tile-name { font-size: 1.35rem; font-weight: 700; line-height: 1.15; }
 .tile .tile-mode { font-size: 0.85rem; opacity: 0.8; }
 
+/* Tag filter chips: horizontal scroll for touch */
+#recipe-tag-chips {
+  display: flex; gap: 0.5rem; overflow-x: auto;
+  padding-bottom: 0.6rem; margin-bottom: 0.3rem;
+  -webkit-overflow-scrolling: touch;
+}
+#recipe-tag-chips button {
+  min-height: 52px; padding: 0.4rem 1rem; white-space: nowrap;
+  background: var(--bg-raised); font-size: 1.05rem;
+}
+#recipe-tag-chips button.active { background: var(--accent); color: #fff; }
+
 /* My Recipes tiles: cover image with dark gradient for text legibility */
 .recipe-tile {
   min-height: 150px;

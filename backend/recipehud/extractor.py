@@ -232,6 +232,7 @@ def _row_to_dict(row: dict) -> dict:
         "source_host": row["source_host"],
         "fetched_at": row["fetched_at"],
         "saved": bool(row["saved"]),
+        "tags": [t for t in (row.get("tags") or "").split(",") if t],
     }
 
 

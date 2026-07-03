@@ -1,4 +1,5 @@
 import { WSClient } from "/shared/ws-client.js";
+import { fmtQty, parseQty, scaleLine } from "/recipe/scale.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -7,6 +8,35 @@ const targetUrl = params.get("url");
 
 let currentData = null;
 const checkedIngredients = new Set(); // indices; shared by main list + cook-mode peek
+
+// ------------------------------------------------------------- scaling
+
+const SCALE_STEPS = [[0.5, "½×"], [1, "1×"], [2, "2×"], [3, "3×"]];
+let scaleFactor = 1;
+try {
+  scaleFactor = Number(sessionStorage.getItem(`scale:${targetUrl}`)) || 1;
+} catch { /* storage unavailable */ }
+
+function setScale(factor) {
+  scaleFactor = factor;
+  try { sessionStorage.setItem(`scale:${targetUrl}`, String(factor)); } catch { /* ignore */ }
+  renderScaleButtons();
+  renderIngredients($("ingredients"));
+  renderIngredients($("cm-ing-list"));
+  renderMeta();
+}
+
+function renderScaleButtons() {
+  for (const container of document.querySelectorAll(".scale-ctl")) {
+    container.replaceChildren(...SCALE_STEPS.map(([factor, label]) => {
+      const btn = document.createElement("button");
+      btn.textContent = label;
+      btn.classList.toggle("active", factor === scaleFactor);
+      btn.onclick = (ev) => { ev.stopPropagation(); setScale(factor); };
+      return btn;
+    }));
+  }
+}
 
 const DURATION_RE = /(\d+)(?:\s*(?:to|[-–—])\s*(\d+))?\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/gi;
 
@@ -59,13 +89,14 @@ function render(data) {
   hero.hidden = !data.image_url;
   if (data.image_url) hero.src = data.image_url;
 
-  const meta = [];
-  if (data.source_host) meta.push(data.source_host);
-  if (data.yields) meta.push(data.yields);
-  if (data.total_time_s) meta.push(`⏱ ${Math.round(data.total_time_s / 60)} min total`);
-  $("meta").textContent = meta.join(" · ");
+  renderMeta();
+
+  const tags = data.tags || [];
+  $("tags").hidden = tags.length === 0;
+  $("tags").textContent = tags.map((t) => `#${t}`).join("  ");
 
   $("ingredients-section").hidden = data.ingredients.length === 0;
+  renderScaleButtons();
   renderIngredients($("ingredients"));
 
   const isArticle = data.kind === "article";
@@ -80,10 +111,27 @@ function render(data) {
   restoreCookMode();
 }
 
+function renderMeta() {
+  if (!currentData) return;
+  const meta = [];
+  if (currentData.source_host) meta.push(currentData.source_host);
+  if (currentData.yields) {
+    let yields = currentData.yields;
+    if (scaleFactor !== 1) {
+      const lead = yields.match(/^(\d+(?:\.\d+)?)/);
+      const value = lead && parseQty(lead[1]);
+      if (value) yields = `${fmtQty(value * scaleFactor)}${yields.slice(lead[1].length)} (scaled)`;
+    }
+    meta.push(yields);
+  }
+  if (currentData.total_time_s) meta.push(`⏱ ${Math.round(currentData.total_time_s / 60)} min total`);
+  $("meta").textContent = meta.join(" · ");
+}
+
 function renderIngredients(listEl) {
   listEl.replaceChildren(...currentData.ingredients.map((text, i) => {
     const li = document.createElement("li");
-    li.appendChild(document.createTextNode(text));
+    li.appendChild(document.createTextNode(scaleLine(text, scaleFactor)));
     li.classList.toggle("checked", checkedIngredients.has(i));
     li.onclick = () => {
       if (checkedIngredients.has(i)) checkedIngredients.delete(i);

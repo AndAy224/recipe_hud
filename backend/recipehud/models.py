@@ -52,3 +52,8 @@ class RecipeUrlBody(BaseModel):
 class SendBody(BaseModel):
     url: HttpUrl
     clean: bool = False
+
+
+class TagsBody(BaseModel):
+    url: HttpUrl
+    tags: list[str] = Field(max_length=10)
