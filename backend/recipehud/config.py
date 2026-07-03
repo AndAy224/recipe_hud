@@ -17,6 +17,8 @@ class Config(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     db_path: Path = REPO_ROOT / "data" / "recipehud.db"
+    # Local copies of saved-recipe images (served at /media).
+    media_dir: Path = REPO_ROOT / "data" / "media"
     frontend_dir: Path = REPO_ROOT / "frontend"
     # auto | wlopm | x11 | mock
     display_backend: str = "auto"

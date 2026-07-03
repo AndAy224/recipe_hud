@@ -66,7 +66,13 @@ payloads) and the weather proxy.
 
 **My Recipes**: saving marks the cached extraction row (`recipe_cache.saved`)
 — saved rows never expire and always serve from cache, so the library works
-offline and survives the source page disappearing.
+offline and survives the source page disappearing. Saving also downloads the
+hero image into `data/media/` (served at `/media/…`, cleaned up on unsave,
+backfilled at startup for older saves), making each saved recipe a fully
+self-contained snapshot. Two guards protect a confirmed-good copy: a re-fetch
+that fails leaves the cache untouched, and a re-fetch that "succeeds" but can
+no longer parse a recipe (site redesign → article fallback) is discarded in
+favor of the saved copy.
 
 **Night dim**: when the configured night window flips, the idle loop
 broadcasts `night.state`; every UI raises a `pointer-events: none` warm veil

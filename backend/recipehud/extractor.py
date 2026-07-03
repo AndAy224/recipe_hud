@@ -3,12 +3,14 @@ its schema.org data (recipe-scrapers), fall back to readability article text.
 Results are cached in recipe_cache so clean views also work offline."""
 
 import datetime
+import hashlib
 import json
 import logging
 from urllib.parse import urlparse
 
 import httpx
 
+from .config import CONFIG
 from .db import Database
 from .settings_store import SettingsStore
 
@@ -39,8 +41,15 @@ async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = 
             return _row_to_dict(cached)
         raise ExtractionError(f"Could not fetch the page ({exc})") from exc
     data = _parse(html, url)
+    if cached and cached["saved"] and cached["kind"] == "recipe" and data["kind"] != "recipe":
+        # A redesign broke recipe parsing; never let a re-fetch degrade a
+        # confirmed-good saved copy to a plain-text article.
+        log.warning("refresh of %s degraded to %s; keeping the saved copy", url, data["kind"])
+        return _row_to_dict(cached)
     await _save(db, data)
     data["saved"] = bool(cached["saved"]) if cached else False
+    if data["saved"]:
+        data["image_url"] = await snapshot_image(db, url) or data["image_url"]
     return data
 
 
@@ -149,12 +158,73 @@ async def _save(db: Database, data: dict) -> None:
     )
 
 
+# -- image snapshots ------------------------------------------------------
+# Saved recipes must survive the source site vanishing, so the hero image is
+# downloaded next to the DB and served from /media instead of hotlinked.
+
+IMAGE_EXT = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "image/avif": ".avif",
+}
+IMAGE_MAX_BYTES = 8 * 1024 * 1024
+
+
+def local_image_url(row: dict) -> str | None:
+    return f"/media/{row['image_local']}" if row.get("image_local") else None
+
+
+async def snapshot_image(db: Database, url: str) -> str | None:
+    """Download the recipe's hero image locally; returns its /media URL.
+    Best-effort: any failure leaves the remote image_url in use."""
+    row = await db.fetchone(
+        "SELECT image_url, image_local FROM recipe_cache WHERE url = ?", (url,))
+    if not row or not row["image_url"]:
+        return None
+    if row["image_local"]:
+        return local_image_url(row)
+    try:
+        async with httpx.AsyncClient(
+            headers={"User-Agent": USER_AGENT, "Referer": url},
+            follow_redirects=True,
+            timeout=20,
+        ) as client:
+            resp = await client.get(row["image_url"])
+            resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "").split(";")[0].strip()
+        ext = IMAGE_EXT.get(content_type)
+        if not ext or len(resp.content) > IMAGE_MAX_BYTES:
+            log.warning("not snapshotting image for %s (%s, %d bytes)",
+                        url, content_type, len(resp.content))
+            return None
+        name = hashlib.sha1(url.encode()).hexdigest()[:16] + ext
+        CONFIG.media_dir.mkdir(parents=True, exist_ok=True)
+        (CONFIG.media_dir / name).write_bytes(resp.content)
+    except Exception as exc:
+        log.warning("image snapshot failed for %s: %s", url, exc)
+        return None
+    await db.execute(
+        "UPDATE recipe_cache SET image_local = ? WHERE url = ?", (name, url))
+    return f"/media/{name}"
+
+
+async def delete_image_snapshot(db: Database, url: str) -> None:
+    row = await db.fetchone(
+        "SELECT image_local FROM recipe_cache WHERE url = ?", (url,))
+    if row and row["image_local"]:
+        (CONFIG.media_dir / row["image_local"]).unlink(missing_ok=True)
+        await db.execute(
+            "UPDATE recipe_cache SET image_local = NULL WHERE url = ?", (url,))
+
+
 def _row_to_dict(row: dict) -> dict:
     return {
         "url": row["url"],
         "kind": row["kind"],
         "title": row["title"],
-        "image_url": row["image_url"],
+        "image_url": local_image_url(row) or row["image_url"],
         "yields": row["yields"],
         "total_time_s": row["total_time_s"],
         "ingredients": json.loads(row["ingredients_json"]),

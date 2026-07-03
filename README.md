@@ -11,9 +11,10 @@ touch panel mounted portrait (720 wide × 2560 tall).
   minutes" become tap-to-start timer buttons. Cached, so it works offline.
 - **Timers** — multiple named timers, server-side (they survive page
   navigation), with a loud alarm and full-screen flash.
-- **My Recipes** — star any clean-view recipe to keep it forever (offline,
-  survives the source site vanishing); browse from the launcher, add by URL
-  from your phone.
+- **My Recipes** — star any clean-view recipe to keep a fully self-contained
+  snapshot forever: text and photo are stored locally, so it works offline
+  and survives the source site changing or vanishing. Browse from the
+  launcher, add by URL from your phone.
 - **Cook mode** — one step at a time in huge text with giant next/back
   buttons, tap-to-start timers inline, ingredients peek panel; keeps the
   screen awake while you cook.

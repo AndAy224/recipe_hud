@@ -15,6 +15,7 @@ from .api.auth import UNAUTHORIZED_HEADERS, check_basic_header, is_local
 from .config import CONFIG
 from .db import Database
 from .display_ctl import select_backend
+from .extractor import snapshot_image
 from .idle import IdleController
 from .settings_store import SettingsStore
 from .timer_engine import TimerEngine
@@ -43,7 +44,8 @@ async def lifespan(app: FastAPI):
     app.state.idle = idle
 
     await engine.restore()
-    tasks = [asyncio.create_task(idle.run())]
+    tasks = [asyncio.create_task(idle.run()),
+             asyncio.create_task(_backfill_image_snapshots(db))]
     watcher = input_watch.start(idle, store)
     if watcher:
         tasks.append(watcher)
@@ -53,6 +55,15 @@ async def lifespan(app: FastAPI):
         task.cancel()
     await engine.shutdown()
     await db.close()
+
+
+async def _backfill_image_snapshots(db: Database) -> None:
+    """Recipes saved before local image snapshots existed get theirs on boot."""
+    rows = await db.fetchall(
+        "SELECT url FROM recipe_cache WHERE saved = 1 "
+        "AND image_local IS NULL AND image_url IS NOT NULL")
+    for row in rows:
+        await snapshot_image(db, row["url"])
 
 
 app = FastAPI(title="Recipe HUD", lifespan=lifespan)
@@ -130,6 +141,8 @@ async def recipe_page():
     return FileResponse(FRONTEND / "recipe" / "index.html")
 
 
+CONFIG.media_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=CONFIG.media_dir), name="media")
 app.mount("/shared", StaticFiles(directory=FRONTEND / "shared"), name="shared")
 app.mount("/admin", StaticFiles(directory=FRONTEND / "admin", html=True), name="admin")
 app.mount("/recipe", StaticFiles(directory=FRONTEND / "recipe"), name="recipe")
