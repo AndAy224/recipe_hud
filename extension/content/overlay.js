@@ -287,7 +287,7 @@ button:active { filter: brightness(1.3); }
       w = await (await fetch(BACKEND + "/api/weather")).json();
     } catch { /* backend unreachable */ }
     $(".sc-weather").textContent = w && w.configured && !w.error
-      ? `${w.emoji} ${Math.round(w.temp)}° · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
+      ? `${w.emoji} ${Math.round(w.temp)}${w.unit || "°"} · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
       : "";
   }
 

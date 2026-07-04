@@ -118,7 +118,7 @@ async function loadWeather() {
   const ok = w && w.configured && !w.error;
   $("weather").hidden = !ok;
   const text = ok
-    ? `${w.emoji} ${Math.round(w.temp)}° · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
+    ? `${w.emoji} ${Math.round(w.temp)}${w.unit || "°"} · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
     : "";
   $("weather").textContent = text;
   $("scrim-weather").textContent = text;

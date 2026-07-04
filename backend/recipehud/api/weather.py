@@ -75,6 +75,7 @@ async def get_weather(request: Request):
                 "daily": "temperature_2m_max,temperature_2m_min",
                 "forecast_days": 1,
                 "timezone": "auto",
+                "temperature_unit": "fahrenheit",
             })
             resp.raise_for_status()
             raw = resp.json()
@@ -92,6 +93,7 @@ async def get_weather(request: Request):
         "temp": current["temperature_2m"],
         "high": raw["daily"]["temperature_2m_max"][0],
         "low": raw["daily"]["temperature_2m_min"][0],
+        "unit": "°F",
         "is_day": is_day,
         "code": current["weather_code"],
         "emoji": day_emoji if is_day else night_emoji,
