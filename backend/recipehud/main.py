@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Mount
 
 from . import backup, input_watch, log_buffer
 from .api import (
@@ -92,6 +93,19 @@ async def admin_guard(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def static_mount_trailing_slash(request: Request, call_next):
+    # A StaticFiles(html=True) mount at "/x" only serves "/x/", so the bare "/x"
+    # people type or link (e.g. /admin, /send) 404s. Redirect it to the slash
+    # form. Driven by the mount table (_STATIC_HTML_MOUNTS, built after the
+    # mounts below), so every future html=True mount is covered automatically.
+    path = request.url.path
+    if request.method in ("GET", "HEAD") and path in _STATIC_HTML_MOUNTS:
+        target = f"{path}/?{request.url.query}" if request.url.query else f"{path}/"
+        return RedirectResponse(target, status_code=307)
+    return await call_next(request)
+
+
 app.include_router(sites.router)
 app.include_router(timers.router)
 app.include_router(settings_api.router)
@@ -139,6 +153,10 @@ async def ws_endpoint(ws: WebSocket):
 FRONTEND = CONFIG.frontend_dir
 
 
+# /recipe keeps an explicit route: its mount below is NOT html=True (it serves
+# assets only), and the page is reached with a ?url= query the redirect
+# middleware would bounce. /send and /admin are html=True mounts, so the
+# trailing-slash middleware handles their bare paths — no per-route code needed.
 @app.get("/recipe")
 async def recipe_page():
     return FileResponse(FRONTEND / "recipe" / "index.html")
@@ -151,3 +169,15 @@ app.mount("/admin", StaticFiles(directory=FRONTEND / "admin", html=True), name="
 app.mount("/recipe", StaticFiles(directory=FRONTEND / "recipe"), name="recipe")
 app.mount("/send", StaticFiles(directory=FRONTEND / "send", html=True), name="send")
 app.mount("/", StaticFiles(directory=FRONTEND / "launcher", html=True), name="launcher")
+
+# Bare-path prefixes for html=True mounts (e.g. "/admin", "/send"), read by the
+# static_mount_trailing_slash middleware so "/admin" redirects to "/admin/"
+# instead of 404ing. The root ("/") mount is excluded — it has no bare form.
+_STATIC_HTML_MOUNTS = frozenset(
+    route.path
+    for route in app.routes
+    if isinstance(route, Mount)
+    and isinstance(route.app, StaticFiles)
+    and getattr(route.app, "html", False)
+    and route.path not in ("", "/")
+)
