@@ -57,3 +57,8 @@ class SendBody(BaseModel):
 class TagsBody(BaseModel):
     url: HttpUrl
     tags: list[str] = Field(max_length=10)
+
+
+class RenameBody(BaseModel):
+    url: HttpUrl
+    title: str = Field(min_length=1, max_length=200)

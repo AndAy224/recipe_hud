@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from ..extractor import (
     ExtractionError, delete_image_snapshot, extract, local_image_url, snapshot_image,
 )
-from ..models import RecipeUrlBody, TagsBody
+from ..models import RecipeUrlBody, RenameBody, TagsBody
 from .auth import require_admin
 
 router = APIRouter(prefix="/api/recipe", tags=["recipe"])
@@ -81,6 +81,22 @@ async def set_tags(request: Request, body: TagsBody):
     if not row:
         raise HTTPException(404, "Not a saved recipe")
     await db.execute("UPDATE recipe_cache SET tags = ? WHERE url = ?", (tags, url))
+    await request.app.state.hub.broadcast("recipes.updated", {})
+    return _summary(await db.fetchone(SAVED_SUMMARY + " AND url = ?", (url,)))
+
+
+@router.post("/rename", dependencies=[Depends(require_admin)])
+async def rename_recipe(request: Request, body: RenameBody):
+    db = request.app.state.db
+    url = str(body.url)
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(400, "Title must not be empty")
+    row = await db.fetchone(
+        "SELECT url FROM recipe_cache WHERE url = ? AND saved = 1", (url,))
+    if not row:
+        raise HTTPException(404, "Not a saved recipe")
+    await db.execute("UPDATE recipe_cache SET title = ? WHERE url = ?", (title, url))
     await request.app.state.hub.broadcast("recipes.updated", {})
     return _summary(await db.fetchone(SAVED_SUMMARY + " AND url = ?", (url,)))
 

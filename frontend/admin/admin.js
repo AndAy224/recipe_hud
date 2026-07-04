@@ -108,12 +108,20 @@ function renderRecipes() {
     const tags = (r.tags || []).map((t) => `#${t}`).join(" ");
     div.innerHTML = `
       <span class="grow"><strong></strong><br><span class="sub"></span></span>
+      <button class="rename">Rename</button>
       <button class="tags">Tags</button>
       <button class="open">Open on kiosk</button>
       <button class="danger del">Remove</button>`;
     div.querySelector("strong").textContent = r.title;
     div.querySelector(".sub").textContent =
       `${r.source_host} · saved ${(r.saved_at || "").slice(0, 10)}${tags ? " · " + tags : ""}`;
+    div.querySelector(".rename").onclick = async () => {
+      const title = prompt("Recipe name:", r.title);
+      if (title === null) return;
+      if (!title.trim()) { alert("Name can't be empty."); return; }
+      await api("/api/recipe/rename", "POST", { url: r.url, title: title.trim() });
+      loadRecipes();
+    };
     div.querySelector(".tags").onclick = async () => {
       const input = prompt("Tags (comma-separated):", (r.tags || []).join(", "));
       if (input === null) return;
