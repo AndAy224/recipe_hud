@@ -6,5 +6,8 @@ touch follows the portrait transform automatically — no calibration matrix.
 
 Find the exact device name with:  libinput list-devices | grep -B1 touch
 (install.sh prints candidates during setup)
+
+mapToOutput must match the port the panel is on — HDMI-A-1 or HDMI-A-2
+(check with: wlr-randr). install.sh prints the detected output too.
 -->
 <touch deviceName="REPLACE_WITH_TOUCH_DEVICE_NAME" mapToOutput="HDMI-A-1"/>

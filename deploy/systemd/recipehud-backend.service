@@ -1,13 +1,16 @@
 [Unit]
+# NOTE: __USER__ and __UID__ are placeholders. install.sh renders this file
+# for the actual desktop user before copying it to /etc/systemd/system/ —
+# modern Raspberry Pi OS has no default "pi" user (the imager sets a custom one).
 Description=Recipe HUD backend
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=pi
+User=__USER__
 WorkingDirectory=/opt/recipehud
-# Let wlopm reach the labwc compositor socket (Pi OS autologin runs as uid 1000).
-Environment=XDG_RUNTIME_DIR=/run/user/1000
+# Let wlopm reach the labwc compositor socket (autologin desktop user's runtime dir).
+Environment=XDG_RUNTIME_DIR=/run/user/__UID__
 Environment=WAYLAND_DISPLAY=wayland-0
 Environment=RECIPEHUD_DB_PATH=/opt/recipehud/data/recipehud.db
 ExecStart=/opt/recipehud/.venv/bin/uvicorn recipehud.main:app --host 0.0.0.0 --port 8000 --app-dir /opt/recipehud/backend

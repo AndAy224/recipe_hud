@@ -1,6 +1,10 @@
 # ~/.config/kanshi/config — portrait rotation for the VSDISPLAY panel.
 # (The Pi OS "Screen Configuration" GUI writes the same thing.)
 # transform 90 turns the native 2560x720 landscape into 720x2560 portrait.
+#
+# NOTE: install.sh auto-detects and writes this file with the connected output
+# name. The Pi's two HDMI ports are HDMI-A-1 and HDMI-A-2 — set it to match the
+# port your panel is plugged into (check with: wlr-randr).
 profile {
     output HDMI-A-1 mode 2560x720 transform 90
 }

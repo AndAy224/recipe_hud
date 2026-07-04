@@ -8,12 +8,20 @@ BACKEND_URL="http://localhost:8000"
 PROFILE_DIR="$HOME/.config/recipehud-chromium"
 EXTENSION_DIR="/opt/recipehud/extension"
 
+# The binary is "chromium" on Bookworm/Trixie and "chromium-browser" on older
+# Pi OS. Resolve whichever exists so the kiosk launches on either.
+CHROMIUM="$(command -v chromium || command -v chromium-browser || true)"
+if [ -z "$CHROMIUM" ]; then
+    echo "start-kiosk: no chromium binary found (tried chromium, chromium-browser)" >&2
+    exit 1
+fi
+
 until curl -sf "$BACKEND_URL/healthz" > /dev/null; do
     sleep 2
 done
 
 while true; do
-    chromium-browser \
+    "$CHROMIUM" \
         --kiosk "$BACKEND_URL/" \
         --user-data-dir="$PROFILE_DIR" \
         --load-extension="$EXTENSION_DIR" \
