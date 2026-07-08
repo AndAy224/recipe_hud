@@ -42,6 +42,28 @@ function handleEvent(msg) {
     ringing.delete(data.id);
     syncAudio();
   }
+  // Fold live state events into lastSnapshot so a page navigated to *after* a
+  // transition is replayed the current state, not a frozen one. Without this,
+  // a page loaded while lastSnapshot is stale (e.g. cached "off" from an idle
+  // reconnect) paints the wrong scrim until the next live event. Timers self-
+  // heal within ~1s via ticks, but display/night/settings never do.
+  if (lastSnapshot) {
+    if (type === "display.state") {
+      lastSnapshot.display.state = data.state;
+    } else if (type === "night.state") {
+      lastSnapshot.display.night = data.night;
+    } else if (type === "settings.updated") {
+      Object.assign(lastSnapshot.settings, data);
+    } else if (type === "timer.tick") {
+      lastSnapshot.timers = data;
+    } else if (type === "timer.created" || type === "timer.updated") {
+      const idx = lastSnapshot.timers.findIndex((t) => t.id === data.id);
+      if (idx >= 0) lastSnapshot.timers[idx] = data;
+      else lastSnapshot.timers.push(data);
+    } else if (type === "timer.cancelled") {
+      lastSnapshot.timers = lastSnapshot.timers.filter((t) => t.id !== data.id);
+    }
+  }
 }
 
 async function syncAudio() {
