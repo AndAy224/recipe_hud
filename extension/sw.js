@@ -5,6 +5,7 @@
 // after idle sleeps.
 
 const BACKEND_WS = "ws://localhost:8000/ws?role=overlay";
+const BACKEND_HTTP = "http://localhost:8000";
 
 let ws = null;
 let lastSnapshot = null;
@@ -96,7 +97,26 @@ chrome.runtime.onConnect.addListener((port) => {
   port.onDisconnect.addListener(() => ports.delete(port));
   connect();
   if (lastSnapshot) port.postMessage({ type: "snapshot", data: lastSnapshot });
+  refreshDisplay(port); // authoritative state overrides a possibly-stale cache
 });
+
+// The cached snapshot replayed above can be stale (e.g. frozen "off" from an
+// idle reconnect the SW never corrected), which paints the black idle scrim
+// over a freshly-opened recipe. Fetch ground truth over HTTP — independent of
+// the (possibly zombie) WS — and apply it after the cached replay so it wins.
+async function refreshDisplay(port) {
+  let display;
+  try {
+    display = await (await fetch(BACKEND_HTTP + "/api/display")).json();
+  } catch {
+    return; // backend unreachable — keep whatever the cache had
+  }
+  if (lastSnapshot) lastSnapshot.display = display; // heal the cache for next connect
+  try {
+    port.postMessage({ type: "display.state", data: { state: display.state } });
+    port.postMessage({ type: "night.state", data: { night: display.night } });
+  } catch { /* port already gone */ }
+}
 
 chrome.alarms.create("ws-keepalive", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
