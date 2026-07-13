@@ -25,8 +25,17 @@ body { padding: 1.2rem 1.3rem 3rem; line-height: 1.55; }
 
 #hero { width: 100%; max-height: 420px; object-fit: cover; border-radius: var(--radius); }
 #title { font-size: 2rem; line-height: 1.2; margin: 1rem 0 0.4rem; }
-#meta { color: var(--muted); font-size: 1.1rem; margin-top: 0; }
+#meta { color: var(--muted); font-size: 1.1rem; margin: 0 0 0.2rem; }
+#byline { color: var(--muted); font-size: 1rem; margin: 0 0 0.2rem; }
 #tags { color: var(--accent-2); font-size: 1rem; margin-top: 0.2rem; }
+
+/* Nutrition pills: one glanceable per-serving row */
+#nutrition { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; margin-top: 0.7rem; }
+#nutrition .pill {
+  background: var(--bg-raised); border-radius: 999px;
+  padding: 0.35rem 0.85rem; font-size: 0.95rem;
+}
+#nutrition .per-serving { color: var(--muted); font-size: 0.85rem; margin-left: 0.2rem; }
 
 h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 1.8rem 0 0.8rem; }
 

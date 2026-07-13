@@ -72,8 +72,9 @@ async def get_weather(request: Request):
                 "latitude": lat,
                 "longitude": lon,
                 "current": "temperature_2m,weather_code,is_day",
-                "daily": "temperature_2m_max,temperature_2m_min",
-                "forecast_days": 1,
+                "daily": "temperature_2m_max,temperature_2m_min,weather_code,"
+                         "precipitation_probability_max",
+                "forecast_days": 4,
                 "timezone": "auto",
                 "temperature_unit": "fahrenheit",
             })
@@ -88,6 +89,20 @@ async def get_weather(request: Request):
     current = raw["current"]
     is_day = bool(current.get("is_day", 1))
     day_emoji, night_emoji, description = WMO.get(current["weather_code"], ("🌡", "🌡", ""))
+    daily = raw["daily"]
+    forecast = []
+    for i, date in enumerate(daily["time"]):
+        d_emoji, _, d_description = WMO.get(daily["weather_code"][i], ("🌡", "🌡", ""))
+        forecast.append({
+            "date": date,
+            "dow": datetime.date.fromisoformat(date).strftime("%a"),
+            "high": daily["temperature_2m_max"][i],
+            "low": daily["temperature_2m_min"][i],
+            "code": daily["weather_code"][i],
+            "emoji": d_emoji,
+            "description": d_description,
+            "precip_pct": daily["precipitation_probability_max"][i],
+        })
     payload = {
         "configured": True,
         "temp": current["temperature_2m"],
@@ -98,6 +113,7 @@ async def get_weather(request: Request):
         "code": current["weather_code"],
         "emoji": day_emoji if is_day else night_emoji,
         "description": description,
+        "daily": forecast,
         "fetched_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     _cache[location] = (payload, time.monotonic())

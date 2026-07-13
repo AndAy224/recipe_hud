@@ -6,6 +6,7 @@ import datetime
 import hashlib
 import json
 import logging
+import re
 from urllib.parse import urlparse
 
 import httpx
@@ -149,6 +150,11 @@ def _parse_recipe(html: str, url: str) -> dict | None:
     if not ingredients and not steps:
         return None
     total_time_min = grab(scraper.total_time)
+    prep_time_min = grab(scraper.prep_time)
+    cook_time_min = grab(scraper.cook_time)
+    nutrients = grab(scraper.nutrients, {})
+    if not nutrients and schema:
+        nutrients = grab(schema.nutrients, {})
     return {
         "kind": "recipe",
         "title": grab(scraper.title, url),
@@ -157,7 +163,47 @@ def _parse_recipe(html: str, url: str) -> dict | None:
         "total_time_s": int(total_time_min) * 60 if total_time_min else None,
         "ingredients": [str(i) for i in ingredients],
         "steps": [str(s) for s in steps],
+        "meta": {
+            "author": grab(scraper.author),
+            "category": grab(scraper.category),
+            "cuisine": grab(scraper.cuisine),
+            "prep_time_s": int(prep_time_min) * 60 if prep_time_min else None,
+            "cook_time_s": int(cook_time_min) * 60 if cook_time_min else None,
+            "nutrition": _normalize_nutrition(nutrients),
+        },
     }
+
+
+# schema.org NutritionInformation keys -> canonical payload keys. Values are
+# free-form strings ("240 kcal", "4 g"); only the leading number is trusted.
+NUTRIENT_KEYS = {
+    "calories": "calories",
+    "proteinContent": "protein_g",
+    "fatContent": "fat_g",
+    "carbohydrateContent": "carbs_g",
+    "fiberContent": "fiber_g",
+    "sugarContent": "sugar_g",
+    "sodiumContent": "sodium_mg",
+}
+
+
+def _normalize_nutrition(raw: dict) -> dict | None:
+    if not raw:
+        return None
+    out = {}
+    for src, dest in NUTRIENT_KEYS.items():
+        match = re.match(r"[\d.]+", str(raw.get(src, "")).strip())
+        if not match:
+            continue
+        try:
+            value = float(match.group())
+        except ValueError:
+            continue
+        out[dest] = int(value) if value == int(value) else round(value, 1)
+    if not out:
+        return None
+    out["raw"] = raw
+    return out
 
 
 def _parse_article(html: str, url: str) -> dict:
@@ -185,22 +231,24 @@ def _parse_article(html: str, url: str) -> dict:
         "total_time_s": None,
         "ingredients": [],
         "steps": paragraphs,
+        "meta": {},
     }
 
 
 async def _save(db: Database, data: dict) -> None:
     await db.execute(
         "INSERT INTO recipe_cache (url, kind, title, image_url, yields, total_time_s, "
-        "ingredients_json, steps_json, source_host, fetched_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "ingredients_json, steps_json, source_host, fetched_at, meta_json) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(url) DO UPDATE SET kind=excluded.kind, title=excluded.title, "
         "image_url=excluded.image_url, yields=excluded.yields, total_time_s=excluded.total_time_s, "
         "ingredients_json=excluded.ingredients_json, steps_json=excluded.steps_json, "
-        "source_host=excluded.source_host, fetched_at=excluded.fetched_at",
+        "source_host=excluded.source_host, fetched_at=excluded.fetched_at, "
+        "meta_json=excluded.meta_json",
         (
             data["url"], data["kind"], data["title"], data["image_url"], data["yields"],
             data["total_time_s"], json.dumps(data["ingredients"]), json.dumps(data["steps"]),
-            data["source_host"], data["fetched_at"],
+            data["source_host"], data["fetched_at"], json.dumps(data.get("meta") or {}),
         ),
     )
 
@@ -288,6 +336,7 @@ def _row_to_dict(row: dict) -> dict:
         "fetched_at": row["fetched_at"],
         "saved": bool(row["saved"]),
         "tags": [t for t in (row.get("tags") or "").split(",") if t],
+        "meta": json.loads(row["meta_json"]) if row.get("meta_json") else {},
     }
 
 

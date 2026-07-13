@@ -12,12 +12,13 @@ Grades:
   ERROR   extraction endpoint errored
 """
 
+import os
 import sys
 from urllib.parse import quote
 
 import httpx
 
-BASE = "http://127.0.0.1:8000"
+BASE = os.environ.get("RECIPEHUD_TEST_BASE", "http://127.0.0.1:8000")
 
 # Deliberately diverse: big media sites, WP food blogs, UK sites, one paywall.
 SITES = [
@@ -65,6 +66,8 @@ def grade(data: dict) -> tuple[str, str]:
         extras.append("no yields")
     if not data["total_time_s"]:
         extras.append("no time")
+    if not data.get("meta", {}).get("nutrition"):
+        extras.append("no nutrition")
     if problems:
         return "THIN", "; ".join(problems + extras)
     note = (f"{len(data['ingredients'])} ing / {len(data['steps'])} steps"

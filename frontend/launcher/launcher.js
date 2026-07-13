@@ -52,12 +52,20 @@ function renderSites() {
   $("no-sites").hidden = sites.length > 0;
   $("admin-hint").textContent = `${location.origin}/admin`;
 
-  const recent = sites
-    .filter((s) => s.last_visited_at)
-    .sort((a, b) => b.last_visited_at.localeCompare(a.last_visited_at))
-    .slice(0, 2);
-  $("recents").hidden = !(recent.length && sites.length > 4);
-  $("recent-tiles").replaceChildren(...recent.map(tileButton));
+  // Frecency: visit count decayed with a 7-day half-life, so daily-use
+  // sites outrank a one-off visit from yesterday.
+  const now = Date.now();
+  const frecency = (s) => {
+    if (!s.visit_count || !s.last_visited_at) return 0;
+    const days = Math.max(0, (now - new Date(s.last_visited_at)) / 86400000);
+    return s.visit_count * Math.pow(0.5, days / 7);
+  };
+  const frequent = sites
+    .filter((s) => frecency(s) > 0)
+    .sort((a, b) => frecency(b) - frecency(a))
+    .slice(0, 4);
+  $("recents").hidden = !(frequent.length >= 2 && sites.length > 4);
+  $("recent-tiles").replaceChildren(...frequent.map(tileButton));
 }
 
 function openSite(site) {
@@ -122,6 +130,22 @@ async function loadWeather() {
     : "";
   $("weather").textContent = text;
   $("scrim-weather").textContent = text;
+
+  const daily = (ok && w.daily) || [];
+  for (const el of [$("forecast"), $("scrim-forecast")]) {
+    el.hidden = daily.length === 0;
+    el.replaceChildren(...daily.map((d, i) => {
+      const span = document.createElement("span");
+      span.textContent = forecastDayText(d, i);
+      return span;
+    }));
+  }
+}
+
+function forecastDayText(d, i) {
+  let text = `${i === 0 ? "Today" : d.dow} ${d.emoji} ${Math.round(d.high)}°/${Math.round(d.low)}°`;
+  if (d.precip_pct != null && d.precip_pct >= 20) text += ` 💧${Math.round(d.precip_pct)}%`;
+  return text;
 }
 setInterval(loadWeather, 15 * 60 * 1000);
 

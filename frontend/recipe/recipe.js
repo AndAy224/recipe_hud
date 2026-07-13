@@ -1,5 +1,5 @@
 import { WSClient } from "/shared/ws-client.js";
-import { fmtQty, parseQty, scaleLine } from "/recipe/scale.js";
+import { QTY, fmtQty, parseQty, scaleLine } from "/recipe/scale.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,13 +38,34 @@ function renderScaleButtons() {
   }
 }
 
-const DURATION_RE = /(\d+)(?:\s*(?:to|[-–—])\s*(\d+))?\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/gi;
+// Duration phrases in step text. One match covers a single amount
+// ("20 minutes"), a range ("20 to 25 minutes" — larger end wins), or a
+// compound ("1 hour 30 minutes", "1h 30m" — parts sum). Single-letter units
+// only count when attached to the number, so prose like "1 h" stays text.
+const UNIT_WORD = "(?:hours?|hrs?|minutes?|mins?|seconds?|secs?)";
+const DUR_SEG = `${QTY}(?:\\s*(?:to|[-–—])\\s*${QTY})?(?:\\s*${UNIT_WORD}\\b|[hms]\\b)`;
+const DURATION_RE = new RegExp(`${DUR_SEG}(?:\\s*(?:and\\s+)?${DUR_SEG}){0,2}`, "gi");
+const DUR_TOKEN_RE = new RegExp(`(${QTY})\\s*(${UNIT_WORD}|[hms]\\b)?`, "gi");
 
 const UNIT_SECONDS = { h: 3600, m: 60, s: 1 };
 
-function unitFactor(unit) {
-  const c = unit[0].toLowerCase();
-  return UNIT_SECONDS[c === "h" ? "h" : c === "s" && unit.toLowerCase().startsWith("sec") ? "s" : "m"];
+function parseDurationSeconds(phrase) {
+  const tokens = [...phrase.matchAll(DUR_TOKEN_RE)]
+    .map(([, qty, unit]) => ({ value: parseQty(qty), unit }))
+    .filter((t) => t.value !== null);
+  let total = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    let { value, unit } = tokens[i];
+    if (!unit && tokens[i + 1]?.unit) {
+      // Unit-less quantity = the low end of a range; take the larger end.
+      value = Math.max(value, tokens[i + 1].value);
+      unit = tokens[i + 1].unit;
+      i++;
+    }
+    if (!unit) return null;
+    total += value * UNIT_SECONDS[unit[0].toLowerCase()];
+  }
+  return total || null;
 }
 
 function show(id) {
@@ -90,6 +111,8 @@ function render(data) {
   if (data.image_url) hero.src = data.image_url;
 
   renderMeta();
+  renderByline();
+  renderNutrition();
 
   const tags = data.tags || [];
   $("tags").hidden = tags.length === 0;
@@ -124,8 +147,55 @@ function renderMeta() {
     }
     meta.push(yields);
   }
-  if (currentData.total_time_s) meta.push(`⏱ ${Math.round(currentData.total_time_s / 60)} min total`);
+  const m = currentData.meta || {};
+  if (m.prep_time_s && m.cook_time_s) {
+    meta.push(`⏱ ${Math.round(m.prep_time_s / 60)} min prep · ${Math.round(m.cook_time_s / 60)} min cook`);
+  } else if (currentData.total_time_s) {
+    meta.push(`⏱ ${Math.round(currentData.total_time_s / 60)} min total`);
+  }
   $("meta").textContent = meta.join(" · ");
+}
+
+function renderByline() {
+  const m = currentData.meta || {};
+  const parts = [m.author && `By ${m.author}`, m.cuisine, m.category]
+    .filter(Boolean)
+    .map((p) => p.replace(/,(?=\S)/g, ", ")); // sites emit "Italian Inspired,Italian"
+  $("byline").hidden = parts.length === 0;
+  $("byline").textContent = parts.join(" · ");
+}
+
+// Nutrition is per serving; scaling changes servings, not these values, so
+// this never re-renders on scale changes.
+const NUTRITION_PILLS = [
+  ["calories", (v) => `${v} cal`],
+  ["protein_g", (v) => `${v}g protein`],
+  ["fat_g", (v) => `${v}g fat`],
+  ["carbs_g", (v) => `${v}g carbs`],
+];
+
+function renderNutrition() {
+  const n = (currentData.meta || {}).nutrition;
+  const el = $("nutrition");
+  const pills = [];
+  for (const [key, fmt] of NUTRITION_PILLS) {
+    if (n && n[key] != null) pills.push(fmt(n[key]));
+  }
+  el.hidden = pills.length === 0;
+  el.replaceChildren(
+    ...pills.map((text) => {
+      const span = document.createElement("span");
+      span.className = "pill";
+      span.textContent = text;
+      return span;
+    }),
+  );
+  if (pills.length) {
+    const note = document.createElement("span");
+    note.className = "per-serving";
+    note.textContent = "per serving";
+    el.appendChild(note);
+  }
 }
 
 function renderIngredients(listEl) {
@@ -150,21 +220,23 @@ function linkifyDurations(text, index) {
   const frag = document.createDocumentFragment();
   let last = 0;
   for (const match of text.matchAll(DURATION_RE)) {
-    const [full, a, b, unit] = match;
-    const seconds = Math.max(+a, +(b || 0)) * unitFactor(unit);
+    const full = match[0];
+    const seconds = parseDurationSeconds(full);
     frag.appendChild(document.createTextNode(text.slice(last, match.index)));
     last = match.index + full.length;
-    if (seconds >= 10 && seconds <= 12 * 3600) {
+    if (seconds && seconds >= 10 && seconds <= 12 * 3600) {
       const btn = document.createElement("button");
       btn.className = "step-timer";
       btn.textContent = `⏱ ${full}`;
       btn.onclick = async (ev) => {
         ev.stopPropagation();
+        const title = currentData.title || "Recipe";
+        const short = title.length > 40 ? title.slice(0, 39).trimEnd() + "…" : title;
         await fetch("/api/timers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            label: `Step ${index + 1} — ${full}`.slice(0, 60),
+            label: `${short} — step ${index + 1}`,
             seconds,
           }),
         });

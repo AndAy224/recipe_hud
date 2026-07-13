@@ -70,8 +70,12 @@ button:active { filter: brightness(1.3); }
 .scrim .sc-time { font-size: 15vw; font-weight: 200; color: #cfd3da; }
 .scrim .sc-date { font-size: 3.4vw; color: #6c7280; margin-top: 10px; }
 .scrim .sc-weather { font-size: 4.5vw; color: #9aa0ac; margin-top: 26px; }
+.scrim .sc-forecast {
+  font-size: 2.4vw; color: #6c7280; margin-top: 14px;
+  display: flex; flex-wrap: wrap; gap: 6px 2.6vw; justify-content: center;
+}
 .scrim.mode-off .sc-time, .scrim.mode-off .sc-date,
-.scrim.mode-off .sc-weather { visibility: hidden; }
+.scrim.mode-off .sc-weather, .scrim.mode-off .sc-forecast { visibility: hidden; }
 
 .night-veil {
   position: fixed; inset: 0; pointer-events: none;
@@ -121,6 +125,7 @@ button:active { filter: brightness(1.3); }
       <div class="sc-time"></div>
       <div class="sc-date"></div>
       <div class="sc-weather"></div>
+      <div class="sc-forecast"></div>
     </div>
     <div class="alarm" hidden>
       <div class="a-label"></div>
@@ -286,9 +291,18 @@ button:active { filter: brightness(1.3); }
     try {
       w = await (await fetch(BACKEND + "/api/weather")).json();
     } catch { /* backend unreachable */ }
-    $(".sc-weather").textContent = w && w.configured && !w.error
+    const ok = w && w.configured && !w.error;
+    $(".sc-weather").textContent = ok
       ? `${w.emoji} ${Math.round(w.temp)}${w.unit || "°"} · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
       : "";
+    // Optional-chain daily: an older backend won't send it.
+    $(".sc-forecast").replaceChildren(...((ok && w.daily) || []).map((d, i) => {
+      const span = document.createElement("span");
+      let text = `${i === 0 ? "Today" : d.dow} ${d.emoji} ${Math.round(d.high)}°/${Math.round(d.low)}°`;
+      if (d.precip_pct != null && d.precip_pct >= 20) text += ` 💧${Math.round(d.precip_pct)}%`;
+      span.textContent = text;
+      return span;
+    }));
   }
 
   function setDisplayState(state) {

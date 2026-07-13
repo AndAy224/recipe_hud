@@ -64,8 +64,12 @@ button.danger { background: var(--danger); color: #fff; }
 .scrim .scrim-clock { font-size: 7rem; font-weight: 200; color: #cfd3da; }
 .scrim .scrim-date { font-size: 1.6rem; color: #6c7280; margin-top: 0.6rem; }
 .scrim .scrim-weather { font-size: 2rem; color: #9aa0ac; margin-top: 1.2rem; }
+.scrim .scrim-forecast {
+  font-size: 1.15rem; color: #6c7280; margin-top: 0.9rem;
+  display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; justify-content: center;
+}
 .scrim.mode-off .scrim-clock, .scrim.mode-off .scrim-date,
-.scrim.mode-off .scrim-weather { visibility: hidden; }
+.scrim.mode-off .scrim-weather, .scrim.mode-off .scrim-forecast { visibility: hidden; }
 
 /* Night dim: a pointer-events-none veil, NOT a filter — a filtered ancestor
    would become the containing block for every position:fixed scrim/sheet. */

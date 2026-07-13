@@ -15,7 +15,7 @@
 //   unchanged: "Salt to taste", "eggs", "a pinch of saffron",
 //              "2-inch piece ginger" (lookahead), "1,000 g" (comma rejected)
 
-const VULGAR = {
+export const VULGAR = {
   "¼": 1 / 4, "½": 1 / 2, "¾": 3 / 4,
   "⅓": 1 / 3, "⅔": 2 / 3,
   "⅕": 1 / 5, "⅖": 2 / 5, "⅗": 3 / 5, "⅘": 4 / 5,
@@ -28,7 +28,7 @@ const VULGAR_CLASS = `[${Object.keys(VULGAR).join("")}]`;
 // optional attached vulgar, bare vulgar.
 // The space before an attached vulgar ("1 ½") is only consumed when the
 // glyph follows — a bare \s* would swallow the separator space in "2 to 3".
-const QTY = `(?:\\d+\\s+\\d+\\s*/\\s*\\d+|\\d+\\s*/\\s*\\d+|\\d+(?:\\.\\d+)?(?:\\s?${VULGAR_CLASS})?|${VULGAR_CLASS})`;
+export const QTY = `(?:\\d+\\s+\\d+\\s*/\\s*\\d+|\\d+\\s*/\\s*\\d+|\\d+(?:\\.\\d+)?(?:\\s?${VULGAR_CLASS})?|${VULGAR_CLASS})`;
 // Trailing lookahead is load-bearing: rejects "2-inch piece" and "1,000 g".
 const LEAD_RE = new RegExp(
   `^(\\s*)(${QTY})(?:(\\s*(?:[-–—]|to)\\s*)(${QTY}))?(?=\\s|$)`

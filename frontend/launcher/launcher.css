@@ -11,6 +11,10 @@ header { text-align: center; padding: 1.2rem 0 0.6rem; position: relative; }
 #clock { font-size: 6rem; font-weight: 200; line-height: 1; letter-spacing: 0.02em; }
 #date { color: var(--muted); font-size: 1.4rem; margin-top: 0.4rem; }
 #weather { color: var(--muted); font-size: 1.3rem; margin-top: 0.5rem; }
+#forecast {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 0.4rem 1.1rem; color: var(--muted); font-size: 1rem; margin-top: 0.5rem;
+}
 #send-btn {
   position: absolute; top: 0; right: 0;
   width: 64px; height: 64px; font-size: 1.6rem; padding: 0;
