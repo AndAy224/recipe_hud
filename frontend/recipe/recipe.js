@@ -112,9 +112,8 @@ function render(data, refresh = false) {
 
   renderMeta();
   renderByline();
-  renderNutrition();
-
   $("wine").hidden = true;
+  renderNutrition();
   if (data.kind === "recipe") loadWine(data.url, refresh);
 
   const tags = data.tags || [];
@@ -168,9 +167,19 @@ function renderByline() {
   $("byline").textContent = parts.join(" · ");
 }
 
+// Show the at-a-glance card when nutrition and/or wine has content, hiding
+// each labelled block independently based on its own row.
+function syncGlance() {
+  const hasNut = !$("nutrition").hidden;
+  const hasWine = !$("wine").hidden;
+  $("nut-block").hidden = !hasNut;
+  $("wine-block").hidden = !hasWine;
+  $("glance").hidden = !(hasNut || hasWine);
+}
+
 // Nutrition is per serving; scaling changes servings, not these values, so
 // this never re-renders on scale changes.
-const NUTRITION_PILLS = [
+const NUTRITION_FACTS = [
   ["calories", (v) => `${v} cal`],
   ["protein_g", (v) => `${v}g protein`],
   ["fat_g", (v) => `${v}g fat`],
@@ -179,26 +188,14 @@ const NUTRITION_PILLS = [
 
 function renderNutrition() {
   const n = (currentData.meta || {}).nutrition;
+  const parts = [];
+  for (const [key, fmt] of NUTRITION_FACTS) {
+    if (n && n[key] != null) parts.push(fmt(n[key]));
+  }
   const el = $("nutrition");
-  const pills = [];
-  for (const [key, fmt] of NUTRITION_PILLS) {
-    if (n && n[key] != null) pills.push(fmt(n[key]));
-  }
-  el.hidden = pills.length === 0;
-  el.replaceChildren(
-    ...pills.map((text) => {
-      const span = document.createElement("span");
-      span.className = "pill";
-      span.textContent = text;
-      return span;
-    }),
-  );
-  if (pills.length) {
-    const note = document.createElement("span");
-    note.className = "per-serving";
-    note.textContent = "per serving";
-    el.appendChild(note);
-  }
+  el.hidden = parts.length === 0;
+  el.textContent = parts.join("  ·  ");
+  syncGlance();
 }
 
 // Wine pairing loads after the recipe paints (the backend may call an LLM), so
@@ -218,18 +215,19 @@ async function loadWine(url, refresh = false) {
 
 function renderWine(pairing) {
   const el = $("wine");
-  if (!pairing || !pairing.wine) { el.hidden = true; return; }
-  const pill = document.createElement("span");
-  pill.className = "pill";
-  pill.textContent = `🍷 ${pairing.wine}`;
-  el.replaceChildren(pill);
+  if (!pairing || !pairing.wine) { el.hidden = true; syncGlance(); return; }
+  const name = document.createElement("span");
+  name.className = "wine-name";
+  name.textContent = pairing.wine;
+  el.replaceChildren(name);
   if (pairing.note) {
     const note = document.createElement("span");
     note.className = "wine-note";
-    note.textContent = pairing.note;
+    note.textContent = ` — ${pairing.note}`;
     el.appendChild(note);
   }
   el.hidden = false;
+  syncGlance();
 }
 
 function renderIngredients(listEl) {
