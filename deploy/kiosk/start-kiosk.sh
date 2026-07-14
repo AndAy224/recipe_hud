@@ -20,6 +20,10 @@ until curl -sf "$BACKEND_URL/healthz" > /dev/null; do
     sleep 2
 done
 
+# --password-store=basic makes Chromium use its built-in cookie store instead
+# of the system keyring. On this headless kiosk the GNOME keyring is locked and
+# pops a password prompt nobody can answer; Chromium then blocks on cookie init,
+# which hangs every page navigation and leaves the panel a blank white screen.
 while true; do
     "$CHROMIUM" \
         --kiosk "$BACKEND_URL/" \
@@ -30,6 +34,7 @@ while true; do
         --disable-infobars \
         --disable-session-crashed-bubble \
         --hide-crash-restore-bubble \
+        --password-store=basic \
         --disable-features=Translate \
         --disable-component-update \
         --check-for-update-interval=31536000 \
