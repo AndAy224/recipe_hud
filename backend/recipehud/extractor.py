@@ -115,6 +115,72 @@ def _parse(html: str, url: str) -> dict:
     return data
 
 
+def _walk_jsonld(obj):
+    """Yield every dict nested anywhere in parsed JSON-LD (handles @graph, lists)."""
+    if isinstance(obj, dict):
+        yield obj
+        for value in obj.values():
+            yield from _walk_jsonld(value)
+    elif isinstance(obj, list):
+        for value in obj:
+            yield from _walk_jsonld(value)
+
+
+def _flatten_instructions(ri) -> list:
+    """Flatten schema.org recipeInstructions (string | HowToStep | HowToSection)
+    into a flat list of step strings."""
+    steps = []
+    if ri is None:
+        return steps
+    if isinstance(ri, str):
+        return [s.strip() for s in ri.split("\n") if s.strip()]
+    if isinstance(ri, dict):
+        ri = [ri]
+    for item in ri:
+        if isinstance(item, str):
+            if item.strip():
+                steps.append(item.strip())
+        elif isinstance(item, dict):
+            if item.get("@type") == "HowToSection" or "itemListElement" in item:
+                steps.extend(_flatten_instructions(item.get("itemListElement")))
+            else:
+                text = str(item.get("text") or item.get("name") or "").strip()
+                if text:
+                    steps.append(text)
+    return steps
+
+
+def _jsonld_recipe(html: str) -> dict:
+    """Pull ingredients/steps straight from schema.org JSON-LD, bypassing
+    recipe-scrapers' schema parser (which throws on some real-world pages)."""
+    from bs4 import BeautifulSoup
+
+    out = {"ingredients": [], "steps": []}
+    try:
+        soup = BeautifulSoup(html, "html.parser")
+    except Exception:
+        return out
+    for tag in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(tag.string or tag.get_text() or "")
+        except Exception:
+            continue
+        for node in _walk_jsonld(data):
+            types = node.get("@type")
+            types = types if isinstance(types, list) else [types]
+            if "Recipe" not in types:
+                continue
+            if not out["ingredients"]:
+                ing = node.get("recipeIngredient") or node.get("ingredients")
+                if isinstance(ing, list):
+                    out["ingredients"] = [str(i).strip() for i in ing if str(i).strip()]
+            if not out["steps"]:
+                out["steps"] = _flatten_instructions(node.get("recipeInstructions"))
+            if out["ingredients"] and out["steps"]:
+                return out
+    return out
+
+
 def _parse_recipe(html: str, url: str) -> dict | None:
     from recipe_scrapers import scrape_html
 
@@ -147,6 +213,13 @@ def _parse_recipe(html: str, url: str) -> dict | None:
     steps = grab(scraper.instructions_list) or split_lines(grab(scraper.instructions))
     if not steps and schema:
         steps = split_lines(grab(schema.instructions))
+    # Last resort: read schema.org JSON-LD directly. recipe-scrapers' own schema
+    # parser throws on some pages (e.g. SimplyRecipes, whose Recipe node carries
+    # @type ["Recipe","NewsArticle"]), yet the raw ld+json is intact.
+    if not ingredients or not steps:
+        jl = _jsonld_recipe(html)
+        ingredients = ingredients or jl["ingredients"]
+        steps = steps or jl["steps"]
     if not ingredients and not steps:
         return None
     total_time_min = grab(scraper.total_time)
