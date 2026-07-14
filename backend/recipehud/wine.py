@@ -8,6 +8,7 @@ caller (see api/recipe.py), so generation happens once per recipe."""
 
 import json
 import logging
+import re
 
 import httpx
 
@@ -98,7 +99,9 @@ def _parse_pairing(text: str) -> dict | None:
 # Matched against the title, cuisine, category, and ingredient text.
 _RULES: list[tuple[tuple[str, ...], str, str]] = [
     (("chocolate", "brownie", "fudge"), "Port", "sweet richness stands up to chocolate"),
-    (("dessert", "cake", "tart", "cookie", "pie", "custard"),
+    # Only unambiguous dessert words — "pie"/"tart" also name savory dishes
+    # (pot pie, shepherd's pie, tomato tart), so they're deliberately excluded.
+    (("dessert", "cake", "cupcake", "cheesecake", "cookie", "custard", "pudding"),
      "Moscato d'Asti", "light sweetness echoes the dessert"),
     (("shrimp", "scallop", "lobster", "crab", "oyster", "clam", "mussel"),
      "Chablis", "crisp minerality suits shellfish"),
@@ -106,7 +109,7 @@ _RULES: list[tuple[tuple[str, ...], str, str]] = [
      "Sauvignon Blanc", "bright acidity lifts the fish"),
     (("curry", "thai", "indian", "spicy", "chili", "sriracha", "szechuan", "korean"),
      "Off-dry Riesling", "a touch of sweetness tames the heat"),
-    (("beef", "steak", "brisket", "burger", "short rib"),
+    (("beef", "veal", "steak", "brisket", "burger", "short rib", "osso buco"),
      "Cabernet Sauvignon", "bold tannins match red meat"),
     (("lamb", "venison"), "Syrah", "peppery depth complements the game"),
     (("pork", "bacon", "ham", "sausage"),
@@ -135,7 +138,8 @@ def _rule_pairing(recipe: dict) -> dict | None:
         ]
     ).lower()
     for keywords, wine, note in _RULES:
-        if any(kw in haystack for kw in keywords):
+        # Whole-word match so e.g. "pie" doesn't fire on "pieces".
+        if any(re.search(rf"\b{re.escape(kw)}\b", haystack) for kw in keywords):
             return {"wine": wine, "note": note}
     # Sensible default: a versatile, food-friendly red.
     return {"wine": "Pinot Noir", "note": "a versatile, food-friendly red"}
