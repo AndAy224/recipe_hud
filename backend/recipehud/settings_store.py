@@ -21,6 +21,7 @@ DEFAULTS: dict = {
     "touch_device": "",             # optional /dev/input/eventN override
     "recipe_cache_max_age_days": 30,
     "weather_location": "",         # "lat,lon" for Open-Meteo (v1.5)
+    "wine_pairing_enabled": True,   # suggest a wine pairing per recipe
 }
 
 SECRET_KEYS = {"admin_password_hash"}

@@ -1,4 +1,5 @@
 import datetime
+import json
 from collections import Counter
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -7,6 +8,7 @@ from ..extractor import (
     ExtractionError, delete_image_snapshot, extract, local_image_url, snapshot_image,
 )
 from ..models import RecipeUrlBody, RenameBody, TagsBody
+from ..wine import suggest_wine
 from .auth import require_admin
 
 router = APIRouter(prefix="/api/recipe", tags=["recipe"])
@@ -45,6 +47,36 @@ async def extract_recipe(
         return await extract(request.app.state.db, request.app.state.store, url, refresh)
     except ExtractionError as exc:
         raise HTTPException(422, str(exc))
+
+
+@router.get("/wine")
+async def wine_pairing(request: Request, url: str = Query(min_length=10)):
+    """Lazily produce a wine pairing for a (previously extracted) recipe.
+
+    Kept off the /extract path so the recipe view paints immediately. The
+    result is cached into the row's meta_json, so re-views are instant and it
+    rides along with saved recipes offline. Returns {} when there's no pairing
+    (non-recipe page, feature disabled, or the recipe isn't cached yet)."""
+    db = request.app.state.db
+    row = await db.fetchone("SELECT * FROM recipe_cache WHERE url = ?", (url,))
+    if not row:
+        return {}
+    meta = json.loads(row["meta_json"]) if row["meta_json"] else {}
+    if meta.get("wine_pairing"):
+        return meta["wine_pairing"]
+    recipe = {
+        "kind": row["kind"],
+        "title": row["title"],
+        "ingredients": json.loads(row["ingredients_json"]),
+        "meta": meta,
+    }
+    pairing = await suggest_wine(recipe, request.app.state.cfg, request.app.state.store)
+    if not pairing:
+        return {}
+    meta["wine_pairing"] = pairing
+    await db.execute(
+        "UPDATE recipe_cache SET meta_json = ? WHERE url = ?", (json.dumps(meta), url))
+    return pairing
 
 
 @router.get("/saved")

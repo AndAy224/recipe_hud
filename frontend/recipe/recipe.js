@@ -114,6 +114,9 @@ function render(data) {
   renderByline();
   renderNutrition();
 
+  $("wine").hidden = true;
+  if (data.kind === "recipe") loadWine(data.url);
+
   const tags = data.tags || [];
   $("tags").hidden = tags.length === 0;
   $("tags").textContent = tags.map((t) => `#${t}`).join("  ");
@@ -196,6 +199,36 @@ function renderNutrition() {
     note.textContent = "per serving";
     el.appendChild(note);
   }
+}
+
+// Wine pairing loads after the recipe paints (the backend may call an LLM), so
+// the pill pops in when ready. Scale-independent — fetched once per recipe.
+async function loadWine(url) {
+  let pairing;
+  try {
+    const resp = await fetch(`/api/recipe/wine?url=${encodeURIComponent(url)}`);
+    if (!resp.ok) return;
+    pairing = await resp.json();
+  } catch { return; }
+  // The user may have navigated to another recipe while we waited.
+  if (!currentData || currentData.url !== url) return;
+  renderWine(pairing);
+}
+
+function renderWine(pairing) {
+  const el = $("wine");
+  if (!pairing || !pairing.wine) { el.hidden = true; return; }
+  const pill = document.createElement("span");
+  pill.className = "pill";
+  pill.textContent = `🍷 ${pairing.wine}`;
+  el.replaceChildren(pill);
+  if (pairing.note) {
+    const note = document.createElement("span");
+    note.className = "wine-note";
+    note.textContent = pairing.note;
+    el.appendChild(note);
+  }
+  el.hidden = false;
 }
 
 function renderIngredients(listEl) {

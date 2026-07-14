@@ -25,6 +25,9 @@ class Config(BaseSettings):
     debug: bool = False
     # Where the kiosk's Home button / launcher lives, as seen from the Pi itself.
     launcher_url: str = "http://localhost:8000/"
+    # Optional: enables LLM-generated wine pairings. Without it, pairings fall
+    # back to a local rule-based guess. Env: RECIPEHUD_ANTHROPIC_API_KEY.
+    anthropic_api_key: str = ""
 
 
 CONFIG = Config()
