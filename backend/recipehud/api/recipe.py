@@ -50,19 +50,21 @@ async def extract_recipe(
 
 
 @router.get("/wine")
-async def wine_pairing(request: Request, url: str = Query(min_length=10)):
+async def wine_pairing(request: Request, url: str = Query(min_length=10), refresh: bool = False):
     """Lazily produce a wine pairing for a (previously extracted) recipe.
 
     Kept off the /extract path so the recipe view paints immediately. The
     result is cached into the row's meta_json, so re-views are instant and it
     rides along with saved recipes offline. Returns {} when there's no pairing
-    (non-recipe page, feature disabled, or the recipe isn't cached yet)."""
+    (non-recipe page, feature disabled, or the recipe isn't cached yet).
+    refresh=1 forces regeneration, overwriting any cached pairing — used by the
+    clean view's Re-fetch button."""
     db = request.app.state.db
     row = await db.fetchone("SELECT * FROM recipe_cache WHERE url = ?", (url,))
     if not row:
         return {}
     meta = json.loads(row["meta_json"]) if row["meta_json"] else {}
-    if meta.get("wine_pairing"):
+    if not refresh and meta.get("wine_pairing"):
         return meta["wine_pairing"]
     recipe = {
         "kind": row["kind"],

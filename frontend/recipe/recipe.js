@@ -92,7 +92,7 @@ async function load(refresh = false) {
     showError(detail);
     return;
   }
-  render(await resp.json());
+  render(await resp.json(), refresh);
 }
 
 function showError(detail) {
@@ -100,7 +100,7 @@ function showError(detail) {
   show("error");
 }
 
-function render(data) {
+function render(data, refresh = false) {
   currentData = data;
   checkedIngredients.clear();
   document.title = data.title;
@@ -115,7 +115,7 @@ function render(data) {
   renderNutrition();
 
   $("wine").hidden = true;
-  if (data.kind === "recipe") loadWine(data.url);
+  if (data.kind === "recipe") loadWine(data.url, refresh);
 
   const tags = data.tags || [];
   $("tags").hidden = tags.length === 0;
@@ -203,10 +203,11 @@ function renderNutrition() {
 
 // Wine pairing loads after the recipe paints (the backend may call an LLM), so
 // the pill pops in when ready. Scale-independent — fetched once per recipe.
-async function loadWine(url) {
+async function loadWine(url, refresh = false) {
   let pairing;
   try {
-    const resp = await fetch(`/api/recipe/wine?url=${encodeURIComponent(url)}`);
+    const query = `url=${encodeURIComponent(url)}${refresh ? "&refresh=1" : ""}`;
+    const resp = await fetch(`/api/recipe/wine?${query}`);
     if (!resp.ok) return;
     pairing = await resp.json();
   } catch { return; }
