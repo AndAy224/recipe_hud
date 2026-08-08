@@ -42,8 +42,7 @@ The install script prints candidate device names (or run
 ## First boot checks
 
 1. Kiosk boots portrait into the launcher; tiles open sites; touch is accurate.
-2. Admin panel from a phone: `http://<pi>.local:8000/admin`
-   (password `recipehud` — **change it** in the panel).
+2. Admin panel from a phone: `http://<pi>.local:8000/admin` (no login).
 3. Timer alarm is audible (HDMI audio must route to the panel's speakers if
    present, else attach a speaker; check `raspi-config` → audio output).
 4. Leave it idle: clock screen appears, later the panel powers off; a tap

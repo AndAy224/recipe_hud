@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from ..models import ExtendBody, PresetIn, TimerCreate
-from .auth import require_admin
 
 router = APIRouter(prefix="/api", tags=["timers"])
 
@@ -50,7 +49,7 @@ async def list_presets(request: Request):
         "SELECT * FROM timer_presets ORDER BY position, id")
 
 
-@router.post("/presets", dependencies=[Depends(require_admin)])
+@router.post("/presets")
 async def create_preset(request: Request, body: PresetIn):
     db = request.app.state.db
     row = await db.fetchone(
@@ -62,7 +61,7 @@ async def create_preset(request: Request, body: PresetIn):
     return await db.fetchone("SELECT * FROM timer_presets WHERE id = ?", (preset_id,))
 
 
-@router.patch("/presets/{preset_id}", dependencies=[Depends(require_admin)])
+@router.patch("/presets/{preset_id}")
 async def update_preset(request: Request, preset_id: int, body: PresetIn):
     db = request.app.state.db
     await db.execute(
@@ -75,7 +74,7 @@ async def update_preset(request: Request, preset_id: int, body: PresetIn):
     return preset
 
 
-@router.delete("/presets/{preset_id}", dependencies=[Depends(require_admin)])
+@router.delete("/presets/{preset_id}")
 async def delete_preset(request: Request, preset_id: int):
     await request.app.state.db.execute(
         "DELETE FROM timer_presets WHERE id = ?", (preset_id,))

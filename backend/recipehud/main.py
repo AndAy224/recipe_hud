@@ -12,7 +12,6 @@ from . import backup, input_watch, log_buffer
 from .api import (
     debug, display, recipe, send, settings as settings_api, sites, system, timers, weather,
 )
-from .api.auth import UNAUTHORIZED_HEADERS, check_basic_header, is_local
 from .config import CONFIG
 from .db import Database
 from .display_ctl import select_backend
@@ -72,25 +71,14 @@ async def _backfill_image_snapshots(db: Database) -> None:
 
 app = FastAPI(title="Recipe HUD", lifespan=lifespan)
 
-# The extension's content script fetches from recipe-site origins; timers and
-# admin auth must work cross-origin. The API is LAN-open by design (see docs).
+# The extension's content script fetches from recipe-site origins, so timers
+# must work cross-origin. The API (admin included) is LAN-open by design.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def admin_guard(request: Request, call_next):
-    path = request.url.path
-    if path == "/admin" or path.startswith("/admin/"):
-        if not is_local(request) and not check_basic_header(
-            request.app.state.store, request.headers.get("authorization")
-        ):
-            return Response(status_code=401, headers=UNAUTHORIZED_HEADERS)
-    return await call_next(request)
 
 
 @app.middleware("http")

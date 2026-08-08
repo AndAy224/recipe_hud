@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Depends, Request
-
-from .auth import require_admin
+from fastapi import APIRouter, Request
 
 router = APIRouter(prefix="/api", tags=["display"])
 
@@ -10,13 +8,13 @@ async def display_state(request: Request):
     return request.app.state.idle.status()
 
 
-@router.post("/display/on", dependencies=[Depends(require_admin)])
+@router.post("/display/on")
 async def display_on(request: Request):
     await request.app.state.idle.wake()
     return request.app.state.idle.status()
 
 
-@router.post("/display/off", dependencies=[Depends(require_admin)])
+@router.post("/display/off")
 async def display_off(request: Request):
     await request.app.state.idle.force_off()
     return request.app.state.idle.status()

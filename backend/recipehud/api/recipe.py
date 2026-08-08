@@ -2,14 +2,13 @@ import datetime
 import json
 from collections import Counter
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..extractor import (
     ExtractionError, delete_image_snapshot, extract, local_image_url, snapshot_image,
 )
 from ..models import RecipeUrlBody, RenameBody, TagsBody
 from ..wine import suggest_wine
-from .auth import require_admin
 
 router = APIRouter(prefix="/api/recipe", tags=["recipe"])
 
@@ -105,7 +104,7 @@ async def list_tags(request: Request):
             for tag, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))]
 
 
-@router.post("/tags", dependencies=[Depends(require_admin)])
+@router.post("/tags")
 async def set_tags(request: Request, body: TagsBody):
     db = request.app.state.db
     url = str(body.url)
@@ -119,7 +118,7 @@ async def set_tags(request: Request, body: TagsBody):
     return _summary(await db.fetchone(SAVED_SUMMARY + " AND url = ?", (url,)))
 
 
-@router.post("/rename", dependencies=[Depends(require_admin)])
+@router.post("/rename")
 async def rename_recipe(request: Request, body: RenameBody):
     db = request.app.state.db
     url = str(body.url)

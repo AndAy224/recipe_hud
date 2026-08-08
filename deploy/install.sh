@@ -118,5 +118,4 @@ echo "== Done =="
 IP=$(hostname -I | awk '{print $1}')
 echo "Launcher:    http://localhost:8000/  (kiosk shows this after reboot)"
 echo "Admin panel: http://$IP:8000/admin  or  http://$(hostname).local:8000/admin"
-echo "Default admin password: recipehud  — change it in the admin panel!"
 echo "Reboot to start the kiosk: sudo reboot"

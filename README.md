@@ -33,8 +33,8 @@ touch panel mounted portrait (720 wide × 2560 tall).
   your phone; paste any recipe link and it opens on the kitchen display,
   optionally straight into clean view.
 - **Admin panel** — manage sites, presets, timeouts and the display from any
-  browser on your LAN: `http://<pi>.local:8000/admin` (default password
-  `recipehud` — change it).
+  browser on your LAN: `http://<pi>.local:8000/admin` (no login — the API is
+  open to your LAN by design).
 
 ## Screenshots
 

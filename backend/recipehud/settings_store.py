@@ -1,6 +1,4 @@
-import hashlib
 import json
-import secrets
 
 from .db import Database
 
@@ -24,22 +22,9 @@ DEFAULTS: dict = {
     "wine_pairing_enabled": True,   # suggest a wine pairing per recipe
 }
 
+# The admin panel has no login; a hash left over from when it did must still
+# never be served to clients.
 SECRET_KEYS = {"admin_password_hash"}
-DEFAULT_ADMIN_PASSWORD = "recipehud"
-
-
-def hash_password(password: str, salt: str | None = None) -> str:
-    salt = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 200_000)
-    return f"{salt}${digest.hex()}"
-
-
-def verify_password(stored: str, password: str) -> bool:
-    try:
-        salt, _ = stored.split("$", 1)
-    except ValueError:
-        return False
-    return secrets.compare_digest(hash_password(password, salt), stored)
 
 
 class SettingsStore:
@@ -54,9 +39,6 @@ class SettingsStore:
         rows = await self.db.fetchall("SELECT key, value FROM settings")
         stored = {r["key"]: json.loads(r["value"]) for r in rows}
         self._cache = {**DEFAULTS, **stored}
-        if "admin_password_hash" not in self._cache:
-            self._cache["admin_password_hash"] = hash_password(DEFAULT_ADMIN_PASSWORD)
-            await self._persist("admin_password_hash")
 
     def get(self, key: str):
         return self._cache[key]
@@ -90,10 +72,6 @@ class SettingsStore:
             for listener in self._listeners:
                 listener(changed)
         return changed
-
-    async def set_admin_password(self, password: str) -> None:
-        self._cache["admin_password_hash"] = hash_password(password)
-        await self._persist("admin_password_hash")
 
     async def _persist(self, key: str) -> None:
         await self.db.execute(

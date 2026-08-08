@@ -66,12 +66,16 @@ the page's raw schema.org data when a redesign breaks the scraper's
 selectors. Sites that serve no structured data at all (e.g. Smitten Kitchen)
 land on the readable-article view by design.
 
-**Auth model** (documented tradeoff for a home LAN): requests from localhost
-(the kiosk) are implicitly trusted; mutating admin routes and `/admin` require
-HTTP Basic from other hosts. Read/timer routes are open on the LAN, as are
-recipe save/unsave, `POST /api/send` (drive the kiosk to a URL — the point is
-zero-friction from a phone; `HttpUrl` validation blocks `javascript:`/`file:`
-payloads) and the weather proxy.
+**Auth model** (documented tradeoff for a home LAN): there is none. `/admin`
+and every `/api/*` route — including the mutating admin ones and
+`/api/system/*` — answer any request that reaches the backend. The appliance
+is a kitchen panel on a trusted home network, and the friction of a login on
+a touchscreen (and in the extension's cross-origin fetches) bought nothing
+the network boundary wasn't already providing. This is also why `POST
+/api/send` is open: driving the kiosk to a URL from a phone should be
+zero-friction (`HttpUrl` validation still blocks `javascript:`/`file:`
+payloads). Anyone exposing the backend beyond the LAN must put
+authentication in front of it.
 
 **My Recipes**: saving marks the cached extraction row (`recipe_cache.saved`)
 — saved rows never expire and always serve from cache, so the library works

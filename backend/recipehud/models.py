@@ -41,10 +41,6 @@ class NavigateBody(BaseModel):
     url: HttpUrl
 
 
-class PasswordBody(BaseModel):
-    password: str = Field(min_length=4, max_length=128)
-
-
 class RecipeUrlBody(BaseModel):
     url: HttpUrl
 

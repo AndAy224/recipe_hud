@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -16,12 +16,10 @@ from .. import backup, sysinfo
 from ..config import CONFIG
 from ..log_buffer import ring
 from ..models import NavigateBody
-from .auth import require_admin
 
 log = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/system", tags=["system"],
-                   dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/system", tags=["system"])
 
 REPO_ROOT = CONFIG.frontend_dir.parent
 UPDATE_STATUS = CONFIG.db_path.parent / "update-status.json"

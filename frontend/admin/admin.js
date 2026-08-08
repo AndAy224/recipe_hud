@@ -262,15 +262,6 @@ $("geo-search").onclick = async () => {
   if (!results.length) $("geo-results").textContent = "No matches.";
 };
 
-$("password-form").onsubmit = async (ev) => {
-  ev.preventDefault();
-  await api("/api/settings/password", "POST", {
-    password: new FormData(ev.target).get("password"),
-  });
-  ev.target.reset();
-  alert("Password changed. Your browser will ask for it again.");
-};
-
 // ------------------------------------------------------------------- live
 
 let timers = [];
@@ -451,7 +442,7 @@ async function loadLogs() {
     if (update_log.length) lines.push("", "--- update.log ---", ...update_log);
     $("sys-logs").textContent = lines.join("\n") || "(empty)";
     $("sys-logs").scrollTop = $("sys-logs").scrollHeight;
-  } catch { /* auth or network */ }
+  } catch { /* network */ }
 }
 $("logs-refresh").onclick = loadLogs;
 document.querySelector("#system-section details").addEventListener("toggle", (ev) => {

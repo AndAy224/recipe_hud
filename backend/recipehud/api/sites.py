@@ -1,9 +1,8 @@
 import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from ..models import ReorderBody, SiteIn, SiteUpdate
-from .auth import require_admin
 
 router = APIRouter(prefix="/api/sites", tags=["sites"])
 
@@ -14,7 +13,7 @@ async def list_sites(request: Request):
         "SELECT * FROM sites ORDER BY position, id")
 
 
-@router.post("", dependencies=[Depends(require_admin)])
+@router.post("")
 async def create_site(request: Request, body: SiteIn):
     db = request.app.state.db
     row = await db.fetchone("SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM sites")
@@ -25,7 +24,7 @@ async def create_site(request: Request, body: SiteIn):
     return await db.fetchone("SELECT * FROM sites WHERE id = ?", (site_id,))
 
 
-@router.patch("/{site_id}", dependencies=[Depends(require_admin)])
+@router.patch("/{site_id}")
 async def update_site(request: Request, site_id: int, body: SiteUpdate):
     db = request.app.state.db
     updates = body.model_dump(exclude_unset=True)
@@ -43,13 +42,13 @@ async def update_site(request: Request, site_id: int, body: SiteUpdate):
     return site
 
 
-@router.delete("/{site_id}", dependencies=[Depends(require_admin)])
+@router.delete("/{site_id}")
 async def delete_site(request: Request, site_id: int):
     await request.app.state.db.execute("DELETE FROM sites WHERE id = ?", (site_id,))
     return {"ok": True}
 
 
-@router.post("/reorder", dependencies=[Depends(require_admin)])
+@router.post("/reorder")
 async def reorder_sites(request: Request, body: ReorderBody):
     await request.app.state.db.executemany(
         "UPDATE sites SET position = ? WHERE id = ?",
