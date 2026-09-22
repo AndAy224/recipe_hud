@@ -13,7 +13,9 @@ Covers:
   4. the extension SW's refreshDisplay epoch guard drops a /api/display answer
      that a newer live event has already superseded;
   5. releasing an idle inhibitor (keep_awake off, last timer done) starts a
-     fresh idle timeout instead of blanking on a stale one.
+     fresh idle timeout instead of blanking on a stale one;
+  6. OFF only cuts real panel power when `panel_power_off` is on — the default
+     is scrim-only, because this panel powers its own USB touch controller.
 
 NOTE: it writes settings, so point it at a scratch DB, not the appliance.
 """
@@ -115,6 +117,26 @@ async def main() -> None:
             await http.patch("/api/settings", json={
                 "keep_awake": original["keep_awake"],
                 "idle_timeout_s": original["idle_timeout_s"]})
+
+        # 7. Panel power is opt-in. Cutting it on hardware that feeds the USB
+        # touch controller makes the kiosk unwakeable, so OFF must default to
+        # painting the scrim and leaving the backlight alone.
+        prior = (await http.get("/api/settings")).json()["panel_power_off"]
+        try:
+            await http.patch("/api/settings", json={"panel_power_off": False})
+            await http.post("/api/debug/idle/off")
+            st = (await http.get("/api/display")).json()
+            assert st["state"] == "off", st
+            assert st["power"] is True, "default OFF must not cut panel power"
+            await http.post("/api/debug/idle/active")
+
+            await http.patch("/api/settings", json={"panel_power_off": True})
+            await http.post("/api/debug/idle/off")
+            st = (await http.get("/api/display")).json()
+            assert st["power"] is False, "panel_power_off=1 must cut panel power"
+            print("7. panel power opt-in ok (off by default, honoured when on)")
+        finally:
+            await http.patch("/api/settings", json={"panel_power_off": prior})
 
         await http.post("/api/debug/idle/active")
     print("PASS")

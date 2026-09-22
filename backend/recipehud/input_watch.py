@@ -1,6 +1,11 @@
-"""Global touch listener: any touch event resets the idle timer, which is
-what wakes the display even while the panel is powered off (the USB touch
-controller keeps reporting). Linux-only; silently absent elsewhere."""
+"""Global touch listener: any touch event resets the idle timer, which is what
+wakes the display from the clock/black scrim.
+
+NOTE: it is NOT safe to assume the controller keeps reporting while the panel
+is powered off — on this appliance's panel (and many HDMI touch monitors) the
+USB touch controller is powered by the monitor, so a real DPMS off makes it
+disconnect and flap, losing touches entirely. That is why cutting panel power
+is opt-in via the `panel_power_off` setting. Linux-only; absent elsewhere."""
 
 import asyncio
 import logging

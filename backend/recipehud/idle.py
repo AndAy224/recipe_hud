@@ -109,7 +109,12 @@ class IdleController:
         self._set_state(OFF)
         # Scrim first so the panel already shows black when power returns.
         await self._announce(OFF)
-        await self.display.off()
+        # Cutting power is opt-in: on panels that feed the USB touch
+        # controller, DPMS off takes the touchscreen down with it and nothing
+        # can wake the kiosk again. The scrim is already full black, so the
+        # only thing gained by the real cut is backlight power.
+        if self.store.get("panel_power_off"):
+            await self.display.off()
 
     async def _announce(self, state: str) -> None:
         self._last_announce = time.monotonic()

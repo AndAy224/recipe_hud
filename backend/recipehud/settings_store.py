@@ -11,6 +11,14 @@ DEFAULTS: dict = {
     "night_off_end": "06:30",
     "night_idle_timeout_s": 60,     # ACTIVE -> OFF directly inside night window
     "night_dim_enabled": True,      # warm dim veil during the night window
+    # Cut real panel power in OFF, instead of only painting the black scrim.
+    # Off by default, and deliberately so: many HDMI touch panels power their
+    # USB touch controller from the monitor, so a DPMS off makes the
+    # touchscreen disconnect (or flap in and out) — and then a touch cannot
+    # wake the kiosk, which is the only input it has. Verified true of this
+    # appliance's panel (wch.cn 27C0:0859). Only turn this on for hardware
+    # whose touch controller demonstrably stays alive with the panel off.
+    "panel_power_off": False,
     "keep_awake": False,            # manual "cooking mode" toggle
     "alarm_volume": 80,             # 0-100
     "alarm_auto_dismiss_s": 600,    # stop ringing after this long
