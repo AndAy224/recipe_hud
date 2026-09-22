@@ -2,6 +2,7 @@
 its schema.org data (recipe-scrapers), fall back to readability article text.
 Results are cached in recipe_cache so clean views also work offline."""
 
+import asyncio
 import datetime
 import hashlib
 import json
@@ -68,7 +69,11 @@ async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = 
             log.warning("re-fetch failed for %s, serving cached copy: %s", url, exc)
             return _row_to_dict(cached)
         raise ExtractionError(f"Could not fetch the page ({exc})") from exc
-    data = _parse(html, url)
+    # recipe-scrapers + readability + BeautifulSoup are synchronous, CPU-heavy
+    # and slow on the Pi. Run on the loop they freeze the *whole* appliance for
+    # the duration — timer ticks stop, the idle loop stalls and the display
+    # can't be woken — so hand them to a thread.
+    data = await asyncio.to_thread(_parse, html, url)
     if cached and cached["saved"] and cached["kind"] == "recipe" and data["kind"] != "recipe":
         # A redesign broke recipe parsing; never let a re-fetch degrade a
         # confirmed-good saved copy to a plain-text article.

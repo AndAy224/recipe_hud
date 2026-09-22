@@ -48,6 +48,7 @@ async def lifespan(app: FastAPI):
 
     await engine.restore()
     tasks = [asyncio.create_task(idle.run()),
+             asyncio.create_task(_heartbeat(hub)),
              asyncio.create_task(_backfill_image_snapshots(db))]
     watcher = input_watch.start(idle, store)
     if watcher:
@@ -58,6 +59,22 @@ async def lifespan(app: FastAPI):
         task.cancel()
     await engine.shutdown()
     await db.close()
+
+
+HEARTBEAT_S = 20
+
+
+async def _heartbeat(hub: Hub) -> None:
+    """Periodic beat so a client can tell a live socket from a half-open one.
+
+    A wedged TCP connection never fires `onclose` in the browser, so without a
+    steady signal the overlay can sit on a zombie socket indefinitely and never
+    learn the display woke up — a black scrim with no way back. It also gives
+    Hub.broadcast a regular chance to time out and reap such clients server-side.
+    """
+    while True:
+        await asyncio.sleep(HEARTBEAT_S)
+        await hub.broadcast("heartbeat", {})
 
 
 async def _backfill_image_snapshots(db: Database) -> None:

@@ -9,13 +9,29 @@ const BACKEND_HTTP = "http://localhost:8000";
 
 let ws = null;
 let lastSnapshot = null;
+// Bumped by every live state event. refreshDisplay() uses it to tell whether
+// its (async) HTTP answer is still current — see the race note there.
+let stateEpoch = 0;
+// A half-open socket never fires onclose, so readyState stays OPEN forever and
+// the overlay silently stops receiving events. Frames stop arriving though, and
+// the backend beats every 20s, so silence past this long means the socket is a
+// zombie and must be replaced.
+let lastRx = 0;
+const STALE_MS = 70000;
 const ports = new Set();
 const ringing = new Map(); // timer id -> volume
 
 function connect() {
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  if (ws && ws.readyState === WebSocket.CONNECTING) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    if (Date.now() - lastRx < STALE_MS) return;
+    try { ws.close(); } catch { /* already gone */ }
+    ws = null;
+  }
+  lastRx = Date.now();
   ws = new WebSocket(BACKEND_WS);
   ws.onmessage = (ev) => {
+    lastRx = Date.now();
     let msg;
     try { msg = JSON.parse(ev.data); } catch { return; }
     handleEvent(msg);
@@ -29,6 +45,9 @@ function connect() {
 
 function handleEvent(msg) {
   const { type, data } = msg;
+  if (type === "snapshot" || type === "display.state" || type === "night.state") {
+    stateEpoch++;
+  }
   if (type === "snapshot") {
     lastSnapshot = data;
     ringing.clear();
@@ -105,12 +124,18 @@ chrome.runtime.onConnect.addListener((port) => {
 // over a freshly-opened recipe. Fetch ground truth over HTTP — independent of
 // the (possibly zombie) WS — and apply it after the cached replay so it wins.
 async function refreshDisplay(port) {
+  const epoch = stateEpoch;
   let display;
   try {
     display = await (await fetch(BACKEND_HTTP + "/api/display")).json();
   } catch {
     return; // backend unreachable — keep whatever the cache had
   }
+  // This answer describes the state at request time. If a live event landed
+  // while it was in flight, that event is newer — applying the response now
+  // would re-paint an already-dismissed scrim (and, because the backend only
+  // announces state *changes*, nothing would ever clear it again).
+  if (epoch !== stateEpoch) return;
   if (lastSnapshot) lastSnapshot.display = display; // heal the cache for next connect
   try {
     port.postMessage({ type: "display.state", data: { state: display.state } });

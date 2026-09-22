@@ -12,6 +12,15 @@ ACTIVE = "active"
 CLOCK = "clock"
 OFF = "off"
 
+# How often touch may re-announce an unchanged ACTIVE state. Cheap insurance
+# against a client whose view of the state has drifted (see activity()).
+RESYNC_INTERVAL_S = 2.0
+
+
+def _spawn(coro) -> None:
+    """Fire-and-forget from a sync caller inside the running loop."""
+    asyncio.get_running_loop().create_task(coro)
+
 
 class IdleController:
     """Idle state machine: ACTIVE -(idle_timeout)-> CLOCK -(clock_to_off)-> OFF.
@@ -29,6 +38,8 @@ class IdleController:
         self.state = ACTIVE
         self.last_activity = time.monotonic()
         self._state_since = time.monotonic()
+        self._last_announce = 0.0
+        self._waking = False
         self._night: bool | None = None
         store.on_change(self._on_settings_change)
 
@@ -55,28 +66,54 @@ class IdleController:
 
     def activity(self, source: str = "unknown") -> None:
         self.last_activity = time.monotonic()
-        if self.state != ACTIVE:
+        if self.state != ACTIVE or not self.display.is_on():
             log.info("wake on activity (%s)", source)
-            asyncio.get_event_loop().create_task(self.wake())
+            _spawn(self.wake())
+            return
+        # Already ACTIVE here, but a client can still be painting a stale
+        # scrim: a dropped event, a zombie socket, or a late /api/display
+        # response that landed after a newer live one. Nothing else ever
+        # re-announces an unchanged ACTIVE, so without this a stuck client is
+        # unrecoverable by touch — the scrim swallows every tap and the only
+        # way out is a reboot. Re-announce instead, throttled.
+        now = time.monotonic()
+        if now - self._last_announce >= RESYNC_INTERVAL_S:
+            _spawn(self._announce(ACTIVE))
 
     async def wake(self) -> None:
         self.last_activity = time.monotonic()
         if self.state == ACTIVE and self.display.is_on():
             return
-        self._set_state(ACTIVE)
-        await self.display.on()
-        await self.broadcast("display.state", {"state": ACTIVE})
+        # display.on() can take seconds (wlopm retries), and a finger on the
+        # panel calls activity() twice a second. Without this, a display
+        # backend that keeps failing would pile up one retry ladder per tap.
+        if self._waking:
+            return
+        self._waking = True
+        try:
+            self._set_state(ACTIVE)
+            # Announce before powering on: clients must drop the scrim even if
+            # the panel backend is slow or broken, otherwise a failing display
+            # backend also blacks out the UI.
+            await self._announce(ACTIVE)
+            await self.display.on()
+        finally:
+            self._waking = False
 
     async def show_clock(self) -> None:
         self._set_state(CLOCK)
+        await self._announce(CLOCK)
         await self.display.on()
-        await self.broadcast("display.state", {"state": CLOCK})
 
     async def force_off(self) -> None:
         self._set_state(OFF)
         # Scrim first so the panel already shows black when power returns.
-        await self.broadcast("display.state", {"state": OFF})
+        await self._announce(OFF)
         await self.display.off()
+
+    async def _announce(self, state: str) -> None:
+        self._last_announce = time.monotonic()
+        await self.broadcast("display.state", {"state": state})
 
     # -- loop ------------------------------------------------------------
 
@@ -99,9 +136,15 @@ class IdleController:
         if self.engine.has_ringing() and (self.state != ACTIVE or not self.display.is_on()):
             await self.wake()
             return
-        if self.inhibitors():
-            return
         now = time.monotonic()
+        if self.inhibitors():
+            # Hold the idle clock while blanking is inhibited. Otherwise the
+            # moment the inhibitor clears (a long timer finishes, keep_awake
+            # goes off) idle_for is already hours old and the panel blanks
+            # instantly — which reads as "it went to sleep for no reason".
+            self.last_activity = now
+            self._state_since = now
+            return
         idle_for = now - self.last_activity
         in_state_for = now - self._state_since
         if self.state == ACTIVE:
@@ -140,7 +183,7 @@ class IdleController:
 
     def _on_settings_change(self, changed: dict) -> None:
         if changed.get("keep_awake") and self.state != ACTIVE:
-            asyncio.get_event_loop().create_task(self.wake())
+            _spawn(self.wake())
 
 
 def _parse_hhmm(value: str) -> datetime.time:

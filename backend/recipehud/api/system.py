@@ -29,7 +29,7 @@ UPDATE_LOG = CONFIG.db_path.parent / "update.log"
 def _schedule_exit(delay: float = 0.5) -> None:
     """Graceful self-restart: exit after the response is sent; systemd's
     Restart=always brings the backend back up (see recipehud-backend.service)."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     loop.call_later(delay, os.kill, os.getpid(), signal.SIGTERM)
 
 

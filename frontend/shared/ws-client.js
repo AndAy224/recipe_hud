@@ -1,4 +1,10 @@
 // Reconnecting WebSocket wrapper shared by launcher, recipe view and admin.
+// A half-open TCP socket never fires onclose: readyState stays OPEN and the
+// page quietly stops receiving events (stale scrim, frozen timers) with no way
+// back. The backend beats every 20s, so silence longer than this means the
+// socket is a zombie and has to be torn down by hand.
+const STALE_MS = 70000;
+
 export class WSClient {
   constructor(role, onEvent) {
     this.role = role;
@@ -6,14 +12,24 @@ export class WSClient {
     this.ws = null;
     this.backoff = 1000;
     this.lastActivitySent = 0;
+    this.lastRx = Date.now();
+    setInterval(() => this.checkAlive(), 15000);
     this.connect();
+  }
+
+  checkAlive() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (Date.now() - this.lastRx < STALE_MS) return;
+    this.ws.close(); // fires onclose -> the normal reconnect path
   }
 
   connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
+    this.lastRx = Date.now();
     this.ws = new WebSocket(`${proto}://${location.host}/ws?role=${this.role}`);
-    this.ws.onopen = () => { this.backoff = 1000; };
+    this.ws.onopen = () => { this.backoff = 1000; this.lastRx = Date.now(); };
     this.ws.onmessage = (ev) => {
+      this.lastRx = Date.now();
       try {
         const msg = JSON.parse(ev.data);
         this.onEvent(msg.type, msg.data);
