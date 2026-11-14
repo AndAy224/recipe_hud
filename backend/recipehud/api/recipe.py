@@ -8,7 +8,7 @@ from ..extractor import (
     ExtractionError, delete_image_snapshot, extract, local_image_url, snapshot_image,
 )
 from ..models import RecipeUrlBody, RenameBody, TagsBody
-from ..wine import suggest_wine
+from ..wine import is_drink, suggest_wine
 
 router = APIRouter(prefix="/api/recipe", tags=["recipe"])
 
@@ -63,14 +63,22 @@ async def wine_pairing(request: Request, url: str = Query(min_length=10), refres
     if not row:
         return {}
     meta = json.loads(row["meta_json"]) if row["meta_json"] else {}
-    if not refresh and meta.get("wine_pairing"):
-        return meta["wine_pairing"]
     recipe = {
+        "url": url,
         "kind": row["kind"],
         "title": row["title"],
         "ingredients": json.loads(row["ingredients_json"]),
         "meta": meta,
     }
+    # Before the cache: a pairing generated for a cocktail before this check
+    # existed must not keep being served (and is dropped from the row).
+    if is_drink(recipe):
+        if meta.pop("wine_pairing", None):
+            await db.execute(
+                "UPDATE recipe_cache SET meta_json = ? WHERE url = ?", (json.dumps(meta), url))
+        return {}
+    if not refresh and meta.get("wine_pairing"):
+        return meta["wine_pairing"]
     pairing = await suggest_wine(recipe, request.app.state.cfg, request.app.state.store)
     if not pairing:
         return {}

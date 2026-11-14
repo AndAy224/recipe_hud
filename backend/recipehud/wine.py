@@ -17,6 +17,38 @@ from .settings_store import SettingsStore
 
 log = logging.getLogger(__name__)
 
+# A wine pairing for a cocktail is nonsense. Recipe metadata alone can't tell
+# reliably (several cocktail pages carry no category, and punchdrink.com files
+# Hot Buttered Rum under "Toddy,Savory,Strong"), so three signals, most
+# authoritative first: the screensaver deck's own "drink" label, drink words in
+# the schema.org recipeCategory, and a deliberately narrow title list (no
+# "spritz" — spritz cookies; no bare "punch" — punch bowl cake).
+_DRINK_CATEGORY = re.compile(
+    r"\b(drinks?|beverages?|cocktails?|mocktails?|punch|nog|toddy|smoothies?)\b")
+_DRINK_TITLE = re.compile(
+    r"\b(cocktails?|martinis?|eggnog|nog|toddy|toddies|sangria|mojitos?|daiquiris?|"
+    r"negronis?|moscow mule|white russian|mulled wine|gl[üu]hwein|hot buttered rum|"
+    r"wassail|coquito|irish coffee|tom (and|&) jerry)\b")
+# ...unless the title also names a food: "Eggnog Cookies", "Irish Coffee Cake",
+# "Mulled Wine Poached Pears" are dishes that borrow a drink's name.
+_FOOD_TITLE = re.compile(
+    r"\b(cookies?|cakes?|cupcakes?|cheesecakes?|pies?|tarts?|breads?|puddings?|fudge|"
+    r"truffles?|bars|brownies?|blondies?|french toast|pancakes?|waffles?|muffins?|scones?|"
+    r"ice cream|frosting|glazed?|sauce|poached|pears|chicken|pork|beef|ham|salmon|ribs)\b")
+
+
+def is_drink(recipe: dict) -> bool:
+    from .screensaver import deck_category  # local: keeps wine.py import-light
+
+    if recipe.get("url") and deck_category(recipe["url"]) == "drink":
+        return True
+    meta = recipe.get("meta") or {}
+    if _DRINK_CATEGORY.search(str(meta.get("category") or "").lower()):
+        return True
+    title = str(recipe.get("title") or "").lower()
+    return bool(_DRINK_TITLE.search(title)) and not _FOOD_TITLE.search(title)
+
+
 # Anthropic Messages API — Haiku is fast/cheap and plenty for a one-line pick.
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_MODEL = "claude-haiku-4-5"
@@ -26,7 +58,7 @@ ANTHROPIC_VERSION = "2023-06-01"
 async def suggest_wine(recipe: dict, config: Config, store: SettingsStore) -> dict | None:
     """Return {"wine", "note", "source"} for a recipe, or None if disabled/not
     a recipe. Never raises: the rule-based path always yields a result."""
-    if recipe.get("kind") != "recipe":
+    if recipe.get("kind") != "recipe" or is_drink(recipe):
         return None
     if not store.get("wine_pairing_enabled"):
         return None

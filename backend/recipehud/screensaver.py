@@ -88,6 +88,20 @@ def active_deck(store: SettingsStore, today: datetime.date | None = None) -> dic
     return None
 
 
+def deck_category(url: str) -> str | None:
+    """A URL's category in ANY deck, in season or not (a cocktail stays a
+    cocktail after Jan 6). Used to keep wine pairings off the drinks."""
+    try:
+        url = _canonical(url)
+    except ValueError:
+        return None
+    for deck in load_decks():
+        for item in deck["items"]:
+            if item["url"] == url:
+                return item["category"]
+    return None
+
+
 def find_item(deck: dict, url: str) -> dict | None:
     try:
         url = _canonical(url)
