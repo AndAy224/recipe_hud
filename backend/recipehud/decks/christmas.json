@@ -135,6 +135,55 @@
       "blurb": "Vodka, coffee liqueur and Irish cream shaken with homemade gingerbread syrup"
     },
     {
+      "url": "https://www.loveandlemons.com/hot-chocolate-recipe/",
+      "name": "Hot Chocolate",
+      "category": "drink",
+      "emoji": "🍫",
+      "blurb": "Rich stovetop cocoa with melted dark chocolate, topped with whipped cream or marshmallows"
+    },
+    {
+      "url": "https://www.acouplecooks.com/poinsettia-drink/",
+      "name": "Poinsettia",
+      "category": "drink",
+      "emoji": "🥂",
+      "blurb": "Cranberry juice and orange liqueur topped with Champagne, rosemary and cranberries"
+    },
+    {
+      "url": "https://www.acouplecooks.com/christmas-margarita/",
+      "name": "Christmas Margarita",
+      "category": "drink",
+      "emoji": "🎄",
+      "blurb": "Tequila, tart cranberry, Cointreau and lime with a salted rim and a rosemary sprig"
+    },
+    {
+      "url": "https://www.acouplecooks.com/christmas-punch/",
+      "name": "Christmas Punch",
+      "category": "drink",
+      "emoji": "🍒",
+      "blurb": "Cranberry, pineapple and ginger ale with citrus and star anise, rum optional"
+    },
+    {
+      "url": "https://www.acouplecooks.com/cranberry-mimosa/",
+      "name": "Cranberry Mimosa",
+      "category": "drink",
+      "emoji": "🍾",
+      "blurb": "Cranberry and orange juice topped with Prosecco for Christmas morning"
+    },
+    {
+      "url": "https://www.loveandlemons.com/french-75/",
+      "name": "French 75",
+      "category": "drink",
+      "emoji": "🍋",
+      "blurb": "Gin, fresh lemon and simple syrup topped with Champagne and a lemon twist"
+    },
+    {
+      "url": "https://www.loveandlemons.com/espresso-martini/",
+      "name": "Espresso Martini",
+      "category": "drink",
+      "emoji": "☕",
+      "blurb": "Vodka, coffee liqueur and fresh espresso shaken to a foamy top"
+    },
+    {
       "url": "https://www.recipetineats.com/standing-rib-roast/",
       "name": "Prime Rib",
       "category": "main",
@@ -276,6 +325,90 @@
       "category": "dessert",
       "emoji": "🍫",
       "blurb": "Classic chocolate fudge with marshmallow fluff and chopped walnuts"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/peppermint-mocha-cookies/",
+      "name": "Peppermint Mocha Cookies",
+      "category": "dessert",
+      "emoji": "🍬",
+      "blurb": "Chocolate espresso cookies with peppermint, dipped in white chocolate and candy cane",
+      "yields": "20 cookies"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/spritz-cookies/",
+      "name": "Spritz Cookies",
+      "category": "dessert",
+      "emoji": "🎄",
+      "blurb": "Buttery vanilla-almond cookie press shapes finished with sprinkles",
+      "yields": "About 7 dozen"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/linzer-cookies/",
+      "name": "Linzer Cookies",
+      "category": "dessert",
+      "emoji": "❤️",
+      "blurb": "Cinnamon nut shortbread sandwiches with a jam window, dusted in powdered sugar",
+      "yields": "32 sandwich cookies"
+    },
+    {
+      "url": "https://preppykitchen.com/thumbprint-cookies/",
+      "name": "Thumbprint Cookies",
+      "category": "dessert",
+      "emoji": "🍓",
+      "blurb": "Tender butter cookies with a jewel of strawberry, raspberry or apricot jam",
+      "yields": "30 cookies"
+    },
+    {
+      "url": "https://preppykitchen.com/chocolate-crinkle-cookies/",
+      "name": "Chocolate Crinkle Cookies",
+      "category": "dessert",
+      "emoji": "🍪",
+      "blurb": "Fudgy cocoa cookies that crack through a snowy powdered sugar coat",
+      "yields": "About 4 dozen"
+    },
+    {
+      "url": "https://www.onceuponachef.com/recipes/rugelach.html",
+      "name": "Rugelach",
+      "category": "dessert",
+      "emoji": "🥐",
+      "blurb": "Flaky cream cheese pastry rolled around brown sugar, cinnamon and walnuts",
+      "yields": "4 dozen"
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/gingerbread-recipe",
+      "name": "Gingerbread",
+      "category": "dessert",
+      "emoji": "🍰",
+      "blurb": "Dark, moist molasses cake spiced with ginger, cinnamon, nutmeg and cloves"
+    },
+    {
+      "url": "https://www.simplyrecipes.com/recipes/english_toffee/",
+      "name": "English Toffee",
+      "category": "dessert",
+      "emoji": "🍯",
+      "blurb": "Crisp butter toffee under a layer of chocolate and toasted pecans"
+    },
+    {
+      "url": "https://www.bbcgoodfood.com/recipes/classic-christmas-pudding",
+      "name": "Christmas Pudding",
+      "category": "dessert",
+      "emoji": "🔥",
+      "blurb": "Steamed pudding packed with raisins, candied peel, apple and brandy",
+      "yields": "Two 1.2-litre puddings"
+    },
+    {
+      "url": "https://www.bbcgoodfood.com/recipes/unbelievably-easy-mince-pies",
+      "name": "Mince Pies",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Buttery press-in shortcrust filled with mincemeat and dusted with icing sugar"
+    },
+    {
+      "url": "https://www.loveandlemons.com/tiramisu-recipe/",
+      "name": "Tiramisu",
+      "category": "dessert",
+      "emoji": "☕",
+      "blurb": "Espresso-soaked ladyfingers layered with mascarpone cream and cocoa"
     }
   ]
 }
