@@ -164,7 +164,27 @@ button:active { filter: brightness(1.3); }
     try {
       res = await chrome.runtime.sendMessage({ target: "sw", cmd: "api", method, path, body, as });
     } catch { /* extension context gone */ }
-    return res || { ok: false, status: 0 };
+    if (res) return res;
+    // No answer from the worker: it is gone, or it is an old one that predates
+    // the proxy (Chromium does not refresh an unpacked extension's service
+    // worker by itself — see start-kiosk.sh). On the kiosk's own pages the
+    // request is same-origin, so make it directly: the launcher is where
+    // alarms get dismissed, and that must not depend on the worker's health.
+    // On a recipe site there is no such way out (that is what the worker is for).
+    if (!onBackendPage || as !== "json") return { ok: false, status: 0 };
+    try {
+      const hasBody = body !== undefined && body !== null;
+      const resp = await fetch(BACKEND + path, {
+        method,
+        headers: hasBody ? { "Content-Type": "application/json" } : {},
+        body: hasBody ? JSON.stringify(body) : undefined,
+      });
+      let data = null;
+      try { data = await resp.json(); } catch { /* empty or non-JSON body */ }
+      return { ok: resp.ok, status: resp.status, data };
+    } catch {
+      return { ok: false, status: 0 };
+    }
   }
   const api = (path, body) => backend(path, { method: "POST", body });
   // Throwing variants, shaped for the screensaver (which injects them).
@@ -175,6 +195,12 @@ button:active { filter: brightness(1.3); }
   }
   async function fetchBlob(path) {
     const res = await backend(path, { as: "blob" });
+    if (!res.ok && res.status === 0 && onBackendPage) {
+      // Same fallback as backend(): no worker answer, but this page is same-origin.
+      const resp = await fetch(BACKEND + path);
+      if (!resp.ok) throw new Error(`backend ${resp.status}`);
+      return resp.blob();
+    }
     if (!res.ok) throw new Error(`backend ${res.status}`);
     const binary = atob(res.data);
     const bytes = new Uint8Array(binary.length);
