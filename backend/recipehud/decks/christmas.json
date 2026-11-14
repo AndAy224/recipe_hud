@@ -50,12 +50,11 @@
   },
   "items": [
     {
-      "url": "https://www.food.com/recipe/classic-eggnog-208276",
+      "url": "https://www.simplyrecipes.com/recipes/eggnog/",
       "name": "Classic Eggnog",
       "category": "drink",
       "emoji": "🥛",
-      "blurb": "Silky cooked custard nog with whipped cream, nutmeg, bourbon and brandy",
-      "yields": "About 3 quarts"
+      "blurb": "Rich cooked custard nog with cream, cloves and fresh nutmeg, spiked with bourbon and rum"
     },
     {
       "url": "https://www.onceuponachef.com/recipes/mulled-wine.html",
@@ -212,12 +211,11 @@
       "blurb": "Butter-brushed turkey roasted with lemon, garlic, onion and a bunch of thyme"
     },
     {
-      "url": "https://www.foodnetwork.com/recipes/roasted-christmas-goose-recipe-1943222",
+      "url": "https://www.bbcgoodfood.com/recipes/classic-roast-goose-cider-gravy",
       "name": "Roast Goose",
       "category": "main",
       "emoji": "🪿",
-      "blurb": "Salt-brined goose with chestnut stuffing, brandy basting syrup and Cumberland sauce",
-      "total_time_s": null
+      "blurb": "Crisp-skinned roast goose on a bed of onions with bay, thyme and a cider gravy"
     },
     {
       "url": "https://www.jamieoliver.com/recipes/pork/porchetta/",
