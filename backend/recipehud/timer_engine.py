@@ -177,24 +177,43 @@ class TimerEngine:
 
     async def _tick_loop(self) -> None:
         while self._timers:
-            now_mono = time.monotonic()
-            for timer in list(self._timers.values()):
-                if timer.state == RUNNING and timer.ends_at_mono <= now_mono:
-                    timer.state = RINGING
-                    timer.ring_started_mono = now_mono
-                    await self._persist(timer)
-                    await self.broadcast("alarm.start", {
-                        "id": timer.id,
-                        "label": timer.label,
-                        "volume": self.store.get("alarm_volume"),
-                    })
-                elif timer.state == RINGING:
-                    auto_dismiss = self.store.get("alarm_auto_dismiss_s")
-                    if now_mono - timer.ring_started_mono > auto_dismiss:
-                        await self.dismiss(timer.id)
-            if self._timers:
-                await self.broadcast("timer.tick", self.list())
+            # This loop is the only thing that ever makes a timer ring. An
+            # exception escaping it would end the task without a trace and
+            # leave every running timer counting down to nothing, so a failed
+            # tick is logged and the next one simply tries again.
+            try:
+                await self._tick()
+            except Exception:
+                log.exception("timer tick failed")
             await asyncio.sleep(1)
+
+    async def _tick(self) -> None:
+        now_mono = time.monotonic()
+        for timer in list(self._timers.values()):
+            if self._timers.get(timer.id) is not timer:
+                # Cancelled over REST while an earlier timer in this pass was
+                # awaiting. Acting on the stale object would ring (and
+                # re-persist) a timer that no longer exists.
+                continue
+            if timer.state == RUNNING and timer.ends_at_mono <= now_mono:
+                timer.state = RINGING
+                timer.ring_started_mono = now_mono
+                try:
+                    await self._persist(timer)
+                except Exception:
+                    # A DB hiccup must not swallow the alarm itself.
+                    log.exception("could not persist ringing timer %s", timer.id)
+                await self.broadcast("alarm.start", {
+                    "id": timer.id,
+                    "label": timer.label,
+                    "volume": self.store.get("alarm_volume"),
+                })
+            elif timer.state == RINGING:
+                auto_dismiss = self.store.get("alarm_auto_dismiss_s")
+                if now_mono - timer.ring_started_mono > auto_dismiss:
+                    await self.dismiss(timer.id)
+        if self._timers:
+            await self.broadcast("timer.tick", self.list())
 
     async def _persist(self, timer: Timer) -> None:
         ends_at = time.time() + timer.remaining() if timer.state == RUNNING else None

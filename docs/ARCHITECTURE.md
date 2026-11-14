@@ -141,10 +141,16 @@ Restore is staged as `data/restore-pending.zip` and applied at the NEXT
 startup before the DB opens — the live `-wal`/`-shm` are deleted first and
 the old DB is kept as `.pre-restore`. Restarting the backend never needs
 sudo: the process exits itself and systemd's `Restart=always` revives it.
-Self-update (`deploy/update.sh`) runs `git reset --hard origin/<branch>` +
-`pip install` in `/opt/recipehud` (a real git checkout since install.sh
-rsyncs `.git`), then kills the main pid — a pip/git failure aborts before
-the kill, leaving the old code running.
+Self-update (`deploy/update.sh`) runs `git reset --hard origin/<branch>` in
+`/opt/recipehud` (a real git checkout since install.sh rsyncs `.git`), runs
+`pip install` only when `pyproject.toml` differs from the last successful
+install (`data/deps.sha256`), then kills the main pid. It holds a `flock`, so
+runs can't overlap. If the install does not complete — pip fails, or the
+script is killed mid-way (it lives in the backend's cgroup, so a backend
+restart takes it down too) — it resets the tree back to the commit it started
+from and records `failed`, so the old code keeps running on the packages it
+was started with. The status file carries the script's pid; the API treats an
+update as "running" only while that pid is alive.
 
 ## WebSocket protocol
 

@@ -63,8 +63,10 @@ The install script prints candidate device names (or run
 ## Updating
 
 Preferred: admin panel → System → **Update app**. It fetches the latest
-code into `/opt/recipehud`, reinstalls dependencies, and restarts the
-backend (running timers survive; the kiosk reconnects in seconds). Any local
+code into `/opt/recipehud`, reinstalls dependencies when `pyproject.toml`
+changed, and restarts the backend (running timers survive; the kiosk
+reconnects in seconds). If the dependency install fails or is interrupted,
+the code is put back to the previous version and the update shows as failed. Any local
 edits made directly in `/opt/recipehud` are discarded — the appliance always
 matches the repository. Note: the update button works after the first
 `install.sh` run that delivered the git checkout; older installs need one

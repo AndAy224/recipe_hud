@@ -13,7 +13,10 @@
 //   "⅛ tsp"              ½x -> "0.1 tsp"          (1/16 has no glyph)
 //   "1 (10.5 oz) can"    2x -> "2 (10.5 oz) can"  (parenthetical untouched)
 //   unchanged: "Salt to taste", "eggs", "a pinch of saffron",
-//              "2-inch piece ginger" (lookahead), "1,000 g" (comma rejected)
+//              "2-inch piece ginger" (lookahead), "1,000 g" (comma rejected),
+//              "1 1/2-inch piece ginger", "1 ½-inch piece",
+//              "1 to 1 1/2-pound flank steak" (a size, not an amount — and a
+//              mixed number or range is scaled whole or not at all)
 
 export const VULGAR = {
   "¼": 1 / 4, "½": 1 / 2, "¾": 3 / 4,
@@ -30,8 +33,16 @@ const VULGAR_CLASS = `[${Object.keys(VULGAR).join("")}]`;
 // glyph follows — a bare \s* would swallow the separator space in "2 to 3".
 export const QTY = `(?:\\d+\\s+\\d+\\s*/\\s*\\d+|\\d+\\s*/\\s*\\d+|\\d+(?:\\.\\d+)?(?:\\s?${VULGAR_CLASS})?|${VULGAR_CLASS})`;
 // Trailing lookahead is load-bearing: rejects "2-inch piece" and "1,000 g".
+// The two negative lookaheads stop the regex *backtracking* its way past it:
+// without them "1 1/2-inch piece" fell back to matching just the leading "1"
+// (scaling to a plausible-looking but wrong "2 1/2-inch"), and
+// "1 to 1 1/2-pound" fell back to scaling only one end of the range.
+//   WHOLE:    a quantity may not stop short of a fraction that belongs to it
+//   NO_RANGE: if a range separator + number follows, the range must have matched
+const WHOLE = `(?!\\s+\\d+\\s*/\\s*\\d)(?!\\s?${VULGAR_CLASS})`;
+const NO_RANGE = `(?!\\s*(?:[-–—]|to\\b)\\s*(?:\\d|${VULGAR_CLASS}))`;
 const LEAD_RE = new RegExp(
-  `^(\\s*)(${QTY})(?:(\\s*(?:[-–—]|to)\\s*)(${QTY}))?(?=\\s|$)`
+  `^(\\s*)(${QTY})${WHOLE}(?:(\\s*(?:[-–—]|to)\\s*)(${QTY})${WHOLE})?${NO_RANGE}(?=\\s|$)`
 );
 
 export function parseQty(str) {

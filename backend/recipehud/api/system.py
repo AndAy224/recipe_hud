@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import logging
 import os
@@ -24,6 +25,8 @@ router = APIRouter(prefix="/api/system", tags=["system"])
 REPO_ROOT = CONFIG.frontend_dir.parent
 UPDATE_STATUS = CONFIG.db_path.parent / "update-status.json"
 UPDATE_LOG = CONFIG.db_path.parent / "update.log"
+# deploy/update.sh updates this checkout and nothing else (same override it reads).
+UPDATE_TARGET = Path(os.environ.get("RECIPEHUD_UPDATE_TARGET", "/opt/recipehud"))
 
 
 def _schedule_exit(delay: float = 0.5) -> None:
@@ -129,12 +132,45 @@ def _update_status() -> dict | None:
         return None
 
 
+def _update_running(status: dict | None) -> bool:
+    """True only while update.sh is demonstrably still alive.
+
+    The status file alone can't say: the script runs in this service's cgroup,
+    so a backend restart or a power cut mid-install kills it with the file
+    still reading "installing" — which used to block every later update until
+    someone deleted the file by hand."""
+    if not status or not status.get("ok") or status.get("phase") in ("done", "failed"):
+        return False
+    pid = status.get("pid")
+    if isinstance(pid, int):
+        try:
+            # The pid could have been reused by something else since.
+            return b"update.sh" in Path(f"/proc/{pid}/cmdline").read_bytes()
+        except OSError:
+            return False
+    # Status written by an older update.sh (no pid): believe it only briefly.
+    try:
+        started = datetime.datetime.fromisoformat(status["ts"])
+        age = (datetime.datetime.now(started.tzinfo) - started).total_seconds()
+    except (KeyError, TypeError, ValueError):
+        return False
+    return 0 <= age < 900
+
+
 @router.post("/update")
 async def update():
     if sys.platform != "linux":
         raise HTTPException(400, "Self-update only works on the Pi")
-    status = _update_status()
-    if status and status.get("phase") in ("fetching", "installing") and status.get("ok"):
+    try:
+        is_appliance = REPO_ROOT.resolve() == UPDATE_TARGET.resolve()
+    except OSError:
+        is_appliance = False
+    if not is_appliance:
+        # A dev/scratch instance must not be able to reset and restart the
+        # real appliance (update.sh refuses too; this gives a clear answer).
+        raise HTTPException(
+            400, f"Self-update only runs from the appliance checkout ({UPDATE_TARGET})")
+    if _update_running(_update_status()):
         raise HTTPException(409, "An update is already running")
     script = REPO_ROOT / "deploy" / "update.sh"
     if not script.exists():

@@ -29,7 +29,7 @@ Tests are **standalone scripts, not pytest**, and each needs the backend running
 ```bash
 .venv/bin/python scripts/test_extraction.py       # grades clean-view extraction across ~18 sites
 .venv/bin/python scripts/test_extraction.py --refresh   # bypass recipe_cache
-.venv/bin/python scripts/test_scale.py            # ingredient-scaling cases (requires playwright)
+.venv/bin/python scripts/test_scale.py            # ingredient-scaling cases (drives the system Chromium)
 .venv/bin/python scripts/ws_smoke.py              # WebSocket/alarm smoke test
 ```
 
@@ -45,7 +45,9 @@ The working directory (`/home/hud/recipe_hud`) is a **dev checkout**. The *runni
 
 Deploy flow: **commit → push `origin/main` → trigger the Pi self-update.** `deploy/update.sh` (invoked by `POST /api/system/update`) hardcodes `TARGET=/opt/recipehud`, does `git reset --hard origin/<branch>` + `pip install`, then kills the backend pid so systemd revives the new code. `git reset --hard` means any manual edits inside `/opt/recipehud` are discarded.
 
-**Gotcha — `POST /api/system/update` returns before the deploy lands.** It answers `{"ok":true,"started":true}` the moment `update.sh` is spawned, but the `pip install` inside it can run for minutes on the Pi, and the backend is only killed *after* that. Until then the **old process is still serving**, so an immediate curl against the new behaviour will report the old code and look like a failed deploy. Poll `GET /api/system/update/status`, watch `/opt/recipehud/data/update.log` for `== update finished`, or wait for `systemctl show -p MainPID --value recipehud-backend` to change.
+**Gotcha — `POST /api/system/update` returns before the deploy lands.** It answers `{"ok":true,"started":true}` the moment `update.sh` is spawned. A code-only update restarts the backend within seconds, but when `pyproject.toml` changed the `pip install` can run for minutes on the Pi, and the backend is only killed *after* that. Until then the **old process is still serving**, so an immediate curl against the new behaviour will report the old code and look like a failed deploy. Poll `GET /api/system/update/status` (`phase: done`), watch `/opt/recipehud/data/update.log` for `== update finished`, or wait for `systemctl show -p MainPID --value recipehud-backend` to change.
+
+**`update.sh` only ever updates the checkout it lives in, and only `/opt/recipehud`.** It refuses to run from any other tree, and `POST /api/system/update` answers 400 on a dev/scratch instance — so a throwaway backend can't reset or restart the appliance. (`RECIPEHUD_UPDATE_TARGET` / `RECIPEHUD_UPDATE_SERVICE` exist only to exercise the script against a scratch clone.) An install that fails or is killed mid-way rolls the tree back to the previous commit and reports `failed`; `pip` is skipped entirely when `pyproject.toml` matches `data/deps.sha256`. Still off-limits on a scratch instance: `POST /api/system/kiosk/restart` (it `pkill`s the real kiosk browser).
 
 **Gotcha — extension changes need a kiosk restart too.** `POST /api/system/update` restarts only the *backend*. The extension is loaded into Chromium at launch, so after an extension change you must also call `POST /api/system/kiosk/restart` (kills Chromium; `start-kiosk.sh`'s loop relaunches it and reloads the extension from disk). Backend-only changes don't need this.
 
