@@ -130,6 +130,10 @@ function render(data, refresh = false) {
   $("steps").replaceChildren(...data.steps.map((text, i) => stepItem(text, i, isArticle)));
 
   renderSaveButton(data.saved);
+  userMeta = (data.meta || {}).user || {};
+  undoable = false;
+  closeNoteEditor();
+  renderMyNotes();
   $("cook-mode-btn").hidden = isArticle || data.steps.length === 0;
 
   show("recipe");
@@ -315,7 +319,94 @@ $("save-btn").onclick = async () => {
   if (resp.ok) {
     currentData.saved = !currentData.saved;
     renderSaveButton(currentData.saved);
+    renderMyNotes(); // notes belong to saved recipes: the card comes and goes with the star
   }
+};
+
+// ------------------------------------------------------------- my notes
+// The user's own record of a saved recipe — a 1-5 rating, a "cooked it" log
+// and a free-text note. It lives in the recipe's meta.user on the backend,
+// which keeps it across re-fetches of the page.
+
+let userMeta = {};
+let undoable = false; // only a "cooked it" tapped on this page can be undone here
+
+function fmtDay(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const opts = { month: "short", day: "numeric" };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString([], opts);
+}
+
+function renderMyNotes() {
+  const card = $("mynotes");
+  card.hidden = !(currentData && currentData.saved);
+  if (card.hidden) return;
+
+  const rating = userMeta.rating || 0;
+  $("mn-stars").replaceChildren(...[1, 2, 3, 4, 5].map((n) => {
+    const btn = document.createElement("button");
+    btn.textContent = n <= rating ? "★" : "☆";
+    btn.classList.toggle("on", n <= rating);
+    btn.setAttribute("aria-label", `${n} star${n > 1 ? "s" : ""}`);
+    // Tapping the current rating again clears it.
+    btn.onclick = () => postUser("notes", { rating: n === rating ? 0 : n });
+    return btn;
+  }));
+
+  const cooked = userMeta.cooked || [];
+  $("mn-cooked").textContent = cooked.length
+    ? `Cooked ${cooked.length}× · last ${fmtDay(cooked[cooked.length - 1])}`
+    : "Not cooked yet";
+  $("mn-undo").hidden = !(undoable && cooked.length);
+
+  $("mn-note").textContent = userMeta.notes || "";
+  $("mn-edit").textContent = userMeta.notes ? "✎ Edit note" : "✎ Add a note";
+}
+
+async function postUser(path, body) {
+  if (!currentData) return false;
+  const url = currentData.url;
+  let resp;
+  try {
+    resp = await fetch(`/api/recipe/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, ...body }),
+    });
+  } catch { return false; }
+  if (!resp.ok) return false;
+  const user = await resp.json();
+  if (!currentData || currentData.url !== url) return false; // moved on meanwhile
+  userMeta = user;
+  renderMyNotes();
+  return true;
+}
+
+function closeNoteEditor() {
+  $("mn-editor").hidden = true;
+  $("mn-note").hidden = false;
+  $("mn-edit").hidden = false;
+}
+
+$("mn-edit").onclick = () => {
+  $("mn-textarea").value = userMeta.notes || "";
+  $("mn-editor").hidden = false;
+  $("mn-note").hidden = true;
+  $("mn-edit").hidden = true;
+  $("mn-textarea").focus();
+};
+$("mn-cancel").onclick = closeNoteEditor;
+$("mn-save").onclick = async () => {
+  if (await postUser("notes", { notes: $("mn-textarea").value })) closeNoteEditor();
+};
+$("mn-cooked-btn").onclick = async () => {
+  $("mn-cooked-btn").classList.remove("pulse");
+  if (await postUser("cooked", {})) { undoable = true; renderMyNotes(); }
+};
+$("mn-undo").onclick = async () => {
+  if (await postUser("cooked", { undo: true })) { undoable = false; renderMyNotes(); }
 };
 
 // ------------------------------------------------------------ cook mode
@@ -374,8 +465,14 @@ $("cook-mode-btn").onclick = () => enterCookMode(cookStep);
 $("cm-exit").onclick = exitCookMode;
 $("cm-prev").onclick = () => { if (cookStep > 0) { cookStep--; renderCookStep(); } };
 $("cm-next").onclick = () => {
-  if (cookStep >= currentData.steps.length - 1) exitCookMode();
-  else { cookStep++; renderCookStep(); }
+  if (cookStep >= currentData.steps.length - 1) {
+    exitCookMode();
+    // Finished the last step: bring "Cooked it" into view for a saved recipe.
+    if (currentData.saved) {
+      $("mynotes").scrollIntoView({ block: "center" });
+      $("mn-cooked-btn").classList.add("pulse");
+    }
+  } else { cookStep++; renderCookStep(); }
 };
 $("cm-ing-toggle").onclick = () => { $("cm-ingredients").hidden = false; };
 $("cm-ing-close").onclick = () => { $("cm-ingredients").hidden = true; };

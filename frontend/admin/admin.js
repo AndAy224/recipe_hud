@@ -114,8 +114,13 @@ function renderRecipes() {
       <button class="open">Open on kiosk</button>
       <button class="danger del">Remove</button>`;
     div.querySelector("strong").textContent = r.title;
+    const mine = [
+      r.rating ? "★".repeat(r.rating) : "",
+      r.cook_count ? `cooked ${r.cook_count}×` : "",
+      r.has_notes ? "has a note" : "",
+    ].filter(Boolean).join(" · ");
     div.querySelector(".sub").textContent =
-      `${r.source_host} · saved ${(r.saved_at || "").slice(0, 10)}${tags ? " · " + tags : ""}`;
+      `${r.source_host} · saved ${(r.saved_at || "").slice(0, 10)}${tags ? " · " + tags : ""}${mine ? " · " + mine : ""}`;
     div.querySelector(".rename").onclick = async () => {
       const title = prompt("Recipe name:", r.title);
       if (title === null) return;

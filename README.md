@@ -16,6 +16,10 @@ touch panel mounted portrait (720 wide × 2560 tall).
   and survives the source site changing or vanishing. Browse from the
   launcher, add by URL from your phone, organize with tags (tap-to-filter
   chips on the launcher, search in admin).
+- **Cook notes** — on a saved recipe, rate it, tap "Cooked it" to keep a cook
+  log, and jot what you'd change next time ("less salt"). The note sits at the
+  top of the recipe the next time you make it; the launcher shows the rating
+  and count and can sort My Recipes by last cooked or top rated.
 - **Recipe scaling** — ½×/2×/3× buttons on the clean view multiply
   ingredient quantities (fractions, ranges and unicode ½-style amounts all
   handled; ambiguous lines are left alone rather than mis-scaled).

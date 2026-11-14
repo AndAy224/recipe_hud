@@ -38,6 +38,28 @@
         <div id="wine"></div>
       </div>
     </div>
+    <!-- Your own record of a saved recipe: rating, cook log, a note -->
+    <section id="mynotes" hidden>
+      <div class="mn-head">
+        <span class="glance-head">My notes</span>
+        <span id="mn-stars" role="group" aria-label="Your rating"></span>
+      </div>
+      <p id="mn-note"></p>
+      <div id="mn-editor" hidden>
+        <textarea id="mn-textarea" maxlength="2000" rows="4"
+                  placeholder="What would you change next time?"></textarea>
+        <div class="mn-row">
+          <button id="mn-save" class="primary">Save note</button>
+          <button id="mn-cancel">Cancel</button>
+        </div>
+      </div>
+      <div class="mn-row">
+        <span id="mn-cooked"></span>
+        <button id="mn-undo" hidden>Undo</button>
+        <button id="mn-edit"></button>
+        <button id="mn-cooked-btn" class="primary">✓ Cooked it</button>
+      </div>
+    </section>
     <button id="cook-mode-btn" class="primary" hidden>👨‍🍳 Cook mode</button>
 
     <section id="ingredients-section" hidden>

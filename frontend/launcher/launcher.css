@@ -71,6 +71,15 @@ h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-s
 }
 #recipe-tag-chips button.active { background: var(--accent); color: #fff; }
 
+/* Sort order for My Recipes (only shown once something is rated or cooked) */
+#recipe-sort-chips { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+#recipe-sort-chips button {
+  min-height: 48px; padding: 0.3rem 0.9rem; white-space: nowrap;
+  background: none; color: var(--muted); font-size: 0.95rem;
+  border: 2px solid color-mix(in srgb, var(--fg) 14%, transparent);
+}
+#recipe-sort-chips button.active { color: var(--fg); border-color: var(--accent-2); }
+
 /* My Recipes tiles: cover image with dark gradient for text legibility */
 .recipe-tile {
   min-height: 150px;
@@ -98,6 +107,8 @@ h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-s
 }
 .recipe-tile .rt-title { font-size: 1.25rem; font-weight: 700; line-height: 1.15; text-shadow: 0 1px 3px #000; }
 .recipe-tile .rt-host { font-size: 0.85rem; opacity: 0.85; }
+.recipe-tile .rt-mine { font-size: 0.85rem; color: #f3cf6b; text-shadow: 0 1px 2px #000; }
+.recipe-tile .rt-mine:empty { display: none; }
 
 /* Holiday ideas: recipe-tile look plus a save corner button */
 /* Taller than a plain recipe tile: name + 2-line blurb must stay clear of

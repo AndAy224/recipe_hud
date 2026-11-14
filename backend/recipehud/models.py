@@ -58,3 +58,16 @@ class TagsBody(BaseModel):
 class RenameBody(BaseModel):
     url: HttpUrl
     title: str = Field(min_length=1, max_length=200)
+
+
+class NotesBody(BaseModel):
+    """Only the fields that are sent are changed; an empty note or a null/0
+    rating clears that field."""
+    url: HttpUrl
+    notes: str | None = Field(default=None, max_length=2000)
+    rating: int | None = Field(default=None, ge=0, le=5)
+
+
+class CookedBody(BaseModel):
+    url: HttpUrl
+    undo: bool = False  # take back the most recent "cooked it"

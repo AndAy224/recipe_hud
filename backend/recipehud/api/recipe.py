@@ -8,7 +8,7 @@ from ..extractor import (
     ExtractionError, canonical_url, delete_image_snapshot, extract, local_image_url,
     snapshot_image,
 )
-from ..models import RecipeUrlBody, RenameBody, TagsBody
+from ..models import CookedBody, NotesBody, RecipeUrlBody, RenameBody, TagsBody
 from ..screensaver import deck_category
 from ..wine import is_drink, suggest_wine
 
@@ -40,14 +40,31 @@ router = APIRouter(prefix="/api/recipe", tags=["recipe"])
 
 SAVED_SUMMARY = (
     "SELECT url, title, image_url, image_local, yields, total_time_s, source_host, "
-    "saved_at, tags FROM recipe_cache WHERE saved = 1"
+    "saved_at, tags, meta_json FROM recipe_cache WHERE saved = 1"
 )
+
+# The user's own record of a saved recipe lives in meta_json["user"]:
+#   {"notes": str, "rating": 1-5, "cooked": [ISO timestamps, oldest first]}
+# (absent keys = not set). extractor.PRESERVED_META keeps it across re-fetches.
+COOK_LOG_MAX = 100
+
+
+def _user_meta(meta: dict) -> dict:
+    user = meta.get("user")
+    return user if isinstance(user, dict) else {}
 
 
 def _summary(row: dict) -> dict:
     row["image_url"] = local_image_url(row) or row["image_url"]
     row.pop("image_local", None)
     row["tags"] = [t for t in (row.get("tags") or "").split(",") if t]
+    meta_json = row.pop("meta_json", None)
+    user = _user_meta(json.loads(meta_json) if meta_json else {})
+    cooked = user.get("cooked") or []
+    row["rating"] = user.get("rating")
+    row["cook_count"] = len(cooked)
+    row["last_cooked_at"] = cooked[-1] if cooked else None
+    row["has_notes"] = bool(user.get("notes"))
     return row
 
 
@@ -175,6 +192,61 @@ async def rename_recipe(request: Request, body: RenameBody):
     await db.execute("UPDATE recipe_cache SET title = ? WHERE url = ?", (title, url))
     await request.app.state.hub.broadcast("recipes.updated", {})
     return _summary(await db.fetchone(SAVED_SUMMARY + " AND url = ?", (url,)))
+
+
+async def _update_user(request: Request, url: str, mutate) -> dict:
+    """Apply `mutate(user_dict)` to a saved recipe's user record; returns it."""
+    db = request.app.state.db
+    row = await db.fetchone(
+        "SELECT meta_json FROM recipe_cache WHERE url = ? AND saved = 1", (url,))
+    if not row:
+        raise HTTPException(404, "Not a saved recipe")
+    meta = json.loads(row["meta_json"]) if row["meta_json"] else {}
+    user = dict(_user_meta(meta))
+    mutate(user)
+    meta["user"] = user
+    await db.execute(
+        "UPDATE recipe_cache SET meta_json = ? WHERE url = ?", (json.dumps(meta), url))
+    await request.app.state.hub.broadcast("recipes.updated", {})
+    return user
+
+
+@router.post("/notes")
+async def set_notes(request: Request, body: NotesBody):
+    """Personal note and/or 1-5 rating on a saved recipe."""
+    def mutate(user: dict) -> None:
+        if "notes" in body.model_fields_set:
+            text = (body.notes or "").strip()
+            if text:
+                user["notes"] = text
+            else:
+                user.pop("notes", None)
+        if "rating" in body.model_fields_set:
+            if body.rating:
+                user["rating"] = body.rating
+            else:
+                user.pop("rating", None)
+
+    return await _update_user(request, str(body.url), mutate)
+
+
+@router.post("/cooked")
+async def mark_cooked(request: Request, body: CookedBody):
+    """Log that a saved recipe was cooked just now (or undo the last entry)."""
+    def mutate(user: dict) -> None:
+        cooked = list(user.get("cooked") or [])
+        if body.undo:
+            if cooked:
+                cooked.pop()
+        else:
+            cooked.append(
+                datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
+        if cooked:
+            user["cooked"] = cooked[-COOK_LOG_MAX:]
+        else:
+            user.pop("cooked", None)
+
+    return await _update_user(request, str(body.url), mutate)
 
 
 async def save_url(state, url: str, add_tags: list[str] | None = None) -> dict:

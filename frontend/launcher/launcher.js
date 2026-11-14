@@ -81,6 +81,34 @@ function openSite(site) {
 let savedRecipes = [];
 let activeTag = null;
 
+// How My Recipes is ordered. "saved" is the order the backend sends
+// (most recently saved first); the other two put never-cooked / unrated last.
+const SORTS = [["saved", "Recently saved"], ["cooked", "Last cooked"], ["rated", "Top rated"]];
+let recipeSort = "saved";
+try { recipeSort = localStorage.getItem("recipeSort") || "saved"; } catch { /* storage unavailable */ }
+
+function sortRecipes(list) {
+  if (recipeSort === "cooked") {
+    return list.slice().sort((a, b) =>
+      (b.last_cooked_at || "").localeCompare(a.last_cooked_at || ""));
+  }
+  if (recipeSort === "rated") {
+    return list.slice().sort((a, b) =>
+      (b.rating || 0) - (a.rating || 0)
+      || (b.last_cooked_at || "").localeCompare(a.last_cooked_at || ""));
+  }
+  return list;
+}
+
+// "★★★★ · cooked 3×" — the user's own record, shown under the title.
+function mineLine(r) {
+  const parts = [];
+  if (r.rating) parts.push("★".repeat(r.rating));
+  if (r.cook_count) parts.push(`cooked ${r.cook_count}×`);
+  if (r.has_notes) parts.push("✎");
+  return parts.join(" · ");
+}
+
 async function loadMyRecipes() {
   try {
     savedRecipes = await (await fetch("/api/recipe/saved")).json();
@@ -100,16 +128,32 @@ function renderMyRecipes() {
     btn.onclick = () => { activeTag = tag; renderMyRecipes(); };
     return btn;
   }));
-  const shown = activeTag
+  // Sorting only means something once a recipe has been rated or cooked.
+  const sortable = savedRecipes.some((r) => r.rating || r.cook_count);
+  if (!sortable) recipeSort = "saved";
+  $("recipe-sort-chips").hidden = !sortable;
+  $("recipe-sort-chips").replaceChildren(...SORTS.map(([key, label]) => {
+    const btn = document.createElement("button");
+    btn.textContent = label;
+    btn.classList.toggle("active", key === recipeSort);
+    btn.onclick = () => {
+      recipeSort = key;
+      try { localStorage.setItem("recipeSort", key); } catch { /* ignore */ }
+      renderMyRecipes();
+    };
+    return btn;
+  }));
+  const shown = sortRecipes(activeTag
     ? savedRecipes.filter((r) => (r.tags || []).includes(activeTag))
-    : savedRecipes;
+    : savedRecipes);
   $("recipe-tiles").replaceChildren(...shown.map((r) => {
     const btn = document.createElement("button");
     btn.className = "recipe-tile";
     if (r.image_url) btn.style.backgroundImage = `url("${r.image_url}")`;
     else btn.style.background = "var(--bg-raised)";
-    btn.innerHTML = `<span class="rt-shade"><span class="rt-title"></span><span class="rt-host"></span></span>`;
+    btn.innerHTML = `<span class="rt-shade"><span class="rt-title"></span><span class="rt-mine"></span><span class="rt-host"></span></span>`;
     btn.querySelector(".rt-title").textContent = r.title;
+    btn.querySelector(".rt-mine").textContent = mineLine(r);
     btn.querySelector(".rt-host").textContent =
       `${r.image_url ? "" : "📖 "}${r.source_host}`;
     btn.onclick = () => { location.href = `/recipe?url=${encodeURIComponent(r.url)}`; };
