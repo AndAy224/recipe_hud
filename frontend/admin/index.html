@@ -93,9 +93,10 @@
     <form id="settings-form" class="card">
       <label>Idle timeout before clock screen (seconds)
         <input name="idle_timeout_s" type="number" min="10"></label>
-      <label>Clock screen before display off (seconds — not used while the holiday screensaver is showing)
+      <label>Clock screen before display off (seconds — not used while a seasonal screensaver is showing)
         <input name="clock_to_off_s" type="number" min="10"></label>
-      <label class="check"><input name="screensaver_enabled" type="checkbox"> Holiday screensaver (Christmas: Nov 1 – Jan 6) — replaces the clock screen and stays up all day instead of going black; night still goes black with Night mode</label>
+      <label class="check"><input name="screensaver_enabled" type="checkbox"> Seasonal screensaver (Thanksgiving in November, Christmas until Jan 6) — in season it replaces the clock screen with a rotating recipe showcase and stays up all day instead of going black; night still goes black with Night mode</label>
+      <label class="check"><input name="screensaver_saved_enabled" type="checkbox"> The rest of the year, show My Recipes photos on the clock screen (it still goes black after the time above)</label>
       <label class="check"><input name="night_mode_enabled" type="checkbox"> Night mode (shorter timeout, straight to off)</label>
       <label class="check"><input name="night_dim_enabled" type="checkbox"> Night dim (warm overlay during the night window — requires Night mode)</label>
       <div class="row">

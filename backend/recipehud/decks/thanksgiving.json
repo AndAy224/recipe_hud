@@ -1,0 +1,251 @@
+{
+  "theme": "thanksgiving",
+  "tag": "thanksgiving",
+  "season": {
+    "start": "11-01",
+    "end": "11-28"
+  },
+  "priority": 20,
+  "_comment": "Every url must extract as kind=recipe with an image (curl /api/recipe/extract?url=...&refresh=1). Optional yields/total_time_s override the extracted values (null hides them). Outranks the Christmas deck (priority 10) for its whole window, so November is Thanksgiving and Christmas takes over on Nov 29; move 'start' later to give early November back to Christmas.",
+  "ui": {
+    "ideas_title": "🦃 Thanksgiving ideas",
+    "hint": "Tap to wake — then ＋ to add it to My Recipes",
+    "default_emoji": "🦃",
+    "categories": {
+      "drink": {
+        "label": "🍎 Something to sip",
+        "color": "#8a3b12"
+      },
+      "main": {
+        "label": "🦃 The main event",
+        "color": "#7a4d0e"
+      },
+      "side": {
+        "label": "🥔 On the side",
+        "color": "#5b6b1f"
+      },
+      "dessert": {
+        "label": "🥧 Save room for pie",
+        "color": "#6b2f1a"
+      }
+    },
+    "palette": {
+      "bg": [
+        "#5a2e12",
+        "#2b1508",
+        "#0f0703"
+      ],
+      "gold": "#e0a040",
+      "cream": "#f8ecd8",
+      "soft": "#d6c2a8",
+      "accent": "#b5521b"
+    },
+    "effects": [
+      "leaves"
+    ],
+    "countdown": {
+      "to": {
+        "month": 11,
+        "weekday": 4,
+        "nth": 4
+      },
+      "many": "🦃 {n} days till Thanksgiving",
+      "one": "🦃 Thanksgiving is tomorrow",
+      "today": "🦃 Happy Thanksgiving!",
+      "after": "🍂 Enjoy the leftovers"
+    }
+  },
+  "items": [
+    {
+      "url": "https://www.simplyrecipes.com/recipes/moms_roast_turkey/",
+      "name": "Mom's Roast Turkey",
+      "category": "main",
+      "emoji": "🦃",
+      "blurb": "A 15-pound bird with lemon, onion, carrot, parsley and rosemary"
+    },
+    {
+      "url": "https://www.seriouseats.com/the-best-simple-roast-turkey-gravy-recipe",
+      "name": "Simple Roast Turkey & Gravy",
+      "category": "main",
+      "emoji": "🦃",
+      "blurb": "Just salt and pepper on the bird, with a from-scratch pan gravy"
+    },
+    {
+      "url": "https://natashaskitchen.com/juicy-roast-turkey-recipe/",
+      "name": "Juicy Roast Turkey",
+      "category": "main",
+      "emoji": "🦃",
+      "blurb": "Slathered in a lemon, garlic and parsley butter"
+    },
+    {
+      "url": "https://www.allrecipes.com/recipe/166160/juicy-thanksgiving-turkey/",
+      "name": "Herb-Rubbed Thanksgiving Turkey",
+      "category": "main",
+      "emoji": "🦃",
+      "blurb": "Rosemary, sage and thyme rub, with orange and onion alongside"
+    },
+    {
+      "url": "https://www.loveandlemons.com/stuffed-acorn-squash/",
+      "name": "Stuffed Acorn Squash",
+      "category": "main",
+      "emoji": "🎃",
+      "blurb": "Meatless centerpiece: mushrooms, sage, wild rice, apple and feta"
+    },
+    {
+      "url": "https://natashaskitchen.com/creamy-mashed-potatoes/",
+      "name": "Creamy Mashed Potatoes",
+      "category": "side",
+      "emoji": "🥔",
+      "blurb": "Russets whipped with hot milk and plenty of butter"
+    },
+    {
+      "url": "https://www.seriouseats.com/classic-sage-and-sausage-stuffing-or-dressing-recipe",
+      "name": "Sage & Sausage Stuffing",
+      "category": "side",
+      "emoji": "🍞",
+      "blurb": "Sage sausage, celery and onion baked into buttery bread"
+    },
+    {
+      "url": "https://www.loveandlemons.com/stuffing-recipe/",
+      "name": "Classic Herb Stuffing",
+      "category": "side",
+      "emoji": "🍞",
+      "blurb": "Meatless, with celery, onion, garlic, sage and parsley"
+    },
+    {
+      "url": "https://www.allrecipes.com/recipe/18379/best-green-bean-casserole/",
+      "name": "Green Bean Casserole",
+      "category": "side",
+      "emoji": "🥗",
+      "blurb": "The four-ingredient classic, with Cheddar and crispy fried onions"
+    },
+    {
+      "url": "https://www.allrecipes.com/recipe/9111/cranberry-sauce/",
+      "name": "Cranberry Sauce",
+      "category": "side",
+      "emoji": "🍒",
+      "blurb": "Three ingredients: cranberries, sugar and orange juice"
+    },
+    {
+      "url": "https://www.onceuponachef.com/recipes/sweet-potato-casserole.html",
+      "name": "Sweet Potato Casserole",
+      "category": "side",
+      "emoji": "🍠",
+      "blurb": "Whipped sweet potatoes with nutmeg under a brown sugar crumble"
+    },
+    {
+      "url": "https://cookieandkate.com/perfect-roasted-brussels-sprouts/",
+      "name": "Roasted Brussels Sprouts",
+      "category": "side",
+      "emoji": "🥬",
+      "blurb": "Sprouts, olive oil and salt, roasted until crisp at the edges"
+    },
+    {
+      "url": "https://www.budgetbytes.com/roasted-brussels-sprouts/",
+      "name": "Brussels Sprouts & Sweet Potato Salad",
+      "category": "side",
+      "emoji": "🥗",
+      "blurb": "With pecans, goat cheese and a maple-cider vinegar dressing"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/soft-dinner-rolls/",
+      "name": "Soft Dinner Rolls",
+      "category": "side",
+      "emoji": "🍞",
+      "blurb": "Milk-and-butter yeast rolls, baked soft and golden"
+    },
+    {
+      "url": "https://www.simplyrecipes.com/recipes/how_to_make_gravy/",
+      "name": "Pan Gravy",
+      "category": "side",
+      "emoji": "🥣",
+      "blurb": "Drippings, flour and stock — ready in under 20 minutes"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/the-great-pumpkin-pie-recipe/",
+      "name": "The Great Pumpkin Pie",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Brown sugar pumpkin custard, topped with sugared cranberries"
+    },
+    {
+      "url": "https://www.simplyrecipes.com/recipes/suzannes_old_fashioned_pumpkin_pie/",
+      "name": "Old-Fashioned Pumpkin Pie",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Warm with cinnamon, ginger, nutmeg and clove"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/my-favorite-pecan-pie-recipe/",
+      "name": "Pecan Pie",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Brown sugar and vanilla filling under a layer of toasted pecans"
+    },
+    {
+      "url": "https://cookieandkate.com/naturally-sweetened-pecan-pie-recipe/",
+      "name": "Maple Pecan Pie",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Sweetened with maple syrup instead of corn syrup; bourbon optional",
+      "yields": null
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/apple-pie-recipe",
+      "name": "Apple Pie",
+      "category": "dessert",
+      "emoji": "🍎",
+      "blurb": "A double crust packed with eight cups of sliced apples"
+    },
+    {
+      "url": "https://www.allrecipes.com/recipe/12682/apple-pie-by-grandma-ople/",
+      "name": "Grandma Ople's Apple Pie",
+      "category": "dessert",
+      "emoji": "🍎",
+      "blurb": "Granny Smiths baked in a buttery brown sugar syrup"
+    },
+    {
+      "url": "https://www.simplyrecipes.com/recipes/hot_mulled_cider/",
+      "name": "Hot Mulled Cider",
+      "category": "drink",
+      "emoji": "🍎",
+      "blurb": "Unfiltered cider simmered with orange, clove, cinnamon and cardamom"
+    },
+    {
+      "url": "https://www.loveandlemons.com/apple-cider-sangria/",
+      "name": "Apple Cider Sangria",
+      "category": "drink",
+      "emoji": "🍷",
+      "blurb": "Pinot grigio, cider and orange liqueur over cinnamon-spiced apples"
+    },
+    {
+      "url": "https://www.loveandlemons.com/apple-cider/",
+      "name": "Bourbon Cider Cocktail",
+      "category": "drink",
+      "emoji": "🥃",
+      "blurb": "Bourbon, apple cider and ginger beer with a dash of bitters"
+    },
+    {
+      "url": "https://www.gimmesomeoven.com/cranberry-margaritas/",
+      "name": "Cranberry Margaritas",
+      "category": "drink",
+      "emoji": "🍹",
+      "blurb": "Cranberry juice, lime, tequila and orange liqueur, by the pitcher"
+    },
+    {
+      "url": "https://www.bbcgoodfood.com/recipes/mulled-cider",
+      "name": "Mulled Cider with Calvados",
+      "category": "drink",
+      "emoji": "🍺",
+      "blurb": "Dry cider warmed with Calvados, orange zest, clove and cinnamon",
+      "yields": null
+    },
+    {
+      "url": "https://www.gimmesomeoven.com/slow-cooker-apple-cider/",
+      "name": "Slow Cooker Apple Cider",
+      "category": "drink",
+      "emoji": "🍎",
+      "blurb": "Made from whole apples and an orange, with cinnamon, nutmeg and clove"
+    }
+  ]
+}

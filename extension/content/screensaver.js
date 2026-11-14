@@ -6,8 +6,11 @@
 // Classic script, no modules (content scripts can't import). It only defines
 // globalThis.RHScreensaver; each host decides where it mounts.
 //
-// The idle CLOCK state renders this when the backend reports an in-season
-// deck (GET /api/screensaver); otherwise the host's plain clock shows through.
+// The idle CLOCK state renders this when the backend reports an active deck
+// (GET /api/screensaver); otherwise the host's plain clock shows through.
+// Nothing here knows about any particular season: category labels, colours,
+// effects, the countdown line and the hint all come from the deck's `ui` block
+// (backend/recipehud/decks/*.json), so a new season is a new JSON file.
 // The view is placed INSIDE the host's scrim, so the scrim's wake-on-tap and
 // show/hide logic cover it unchanged. Nothing on the screensaver itself is
 // tappable — the evdev watcher wakes the panel on touch-down, before Chromium
@@ -25,18 +28,52 @@
   const WEATHER_MS = 15 * 60 * 1000;
   const MAX_BLOBS = 4;
 
-  const CATEGORY = {
-    drink: { label: "🍸 Holiday cocktail", color: "#9e1f33" },
-    main: { label: "🍖 Christmas dinner", color: "#7a4d0e" },
-    side: { label: "🥔 On the side", color: "#245c38" },
-    dessert: { label: "🍪 Sweet treat", color: "#6b2752" },
-  };
   const BULB_COLORS = ["#ff5a5a", "#ffd166", "#5fe08a", "#6cb8ff", "#fff0b8"];
+  const LEAVES = ["🍂", "🍁", "🍂", "🍃"];
+  // deck.ui.palette -> CSS custom properties. With no palette nothing is set
+  // and the stylesheet's defaults (the Christmas colours) apply untouched; a
+  // deck that brings its own gets matching secondary shades derived from it.
+  function paletteVars(palette) {
+    const vars = {};
+    for (const key of ["gold", "cream", "soft", "accent"]) {
+      if (palette[key]) vars[`--${key}`] = palette[key];
+    }
+    if (palette.gold) {
+      vars["--gold-line"] = `color-mix(in srgb, ${palette.gold} 75%, transparent)`;
+      vars["--gold-glow"] = `color-mix(in srgb, ${palette.gold} 18%, transparent)`;
+    }
+    if (palette.soft) {
+      vars["--softer"] = `color-mix(in srgb, ${palette.soft} 86%, #000)`;
+      vars["--blurb"] = `color-mix(in srgb, ${palette.soft} 80%, #fff)`;
+    }
+    if (palette.accent) {
+      vars["--accent-hi"] = `color-mix(in srgb, ${palette.accent} 55%, #fff)`;
+      vars["--accent-lo"] = `color-mix(in srgb, ${palette.accent} 48%, #000)`;
+      vars["--accent-glow"] = `color-mix(in srgb, ${palette.accent} 45%, transparent)`;
+    }
+    if (palette.bg) {
+      const [top, mid, bottom] = palette.bg;
+      Object.assign(vars, { "--bg-top": top, "--bg-mid": mid, "--bg-bottom": bottom });
+      vars["--photo-bg"] = `color-mix(in srgb, ${mid} 75%, #000)`;
+      vars["--toast-bg"] = `color-mix(in srgb, color-mix(in srgb, ${mid} 55%, ${bottom}) 97%, transparent)`;
+    }
+    return vars;
+  }
+  const THEME_VARS = Object.keys(paletteVars({
+    gold: "#000", cream: "#000", soft: "#000", accent: "#000", bg: ["#000", "#000", "#000"],
+  }));
 
   const CSS = `
 .rhss, .rhss-toast {
   --u: min(1vw, 0.36vh);
-  --gold: #d9b44a; --cream: #f6eedb; --pine: #0f2a1d;
+  /* Theme colours. These defaults ARE the Christmas look; a deck with its own
+     ui.palette overrides the first two rows and applyTheme() derives the rest. */
+  --gold: #d9b44a; --cream: #f6eedb; --soft: #b9c8bb; --accent: #b3263a;
+  --bg-top: #1d4d35; --bg-mid: #0f2a1d; --bg-bottom: #050f0a;
+  --softer: #9fb3a4; --blurb: #c9d8cc; --accent-hi: #ff8a8a; --accent-lo: #5c0f1b;
+  --photo-bg: #0b1f15; --toast-bg: rgba(9, 28, 19, 0.97);
+  --gold-line: rgba(217, 180, 74, 0.75); --gold-glow: rgba(217, 180, 74, 0.18);
+  --accent-glow: rgba(179, 38, 58, 0.45);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   box-sizing: border-box; -webkit-tap-highlight-color: transparent;
 }
@@ -45,7 +82,7 @@
 
 .rhss {
   position: absolute; inset: 0; z-index: 1; overflow: hidden; color: var(--cream);
-  background: radial-gradient(ellipse 120% 70% at 50% 18%, #1d4d35 0%, #0f2a1d 48%, #050f0a 100%);
+  background: radial-gradient(ellipse 120% 70% at 50% 18%, var(--bg-top) 0%, var(--bg-mid) 48%, var(--bg-bottom) 100%);
   display: flex; flex-direction: column; align-items: center; justify-content: space-evenly;
   padding: calc(var(--u) * 12) calc(var(--u) * 5) calc(var(--u) * 8);
 }
@@ -79,11 +116,21 @@
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(var(--x), 108vh, 0); }
 }
+/* leaves: same transform-only fall, plus a slow tumble */
+.rhss-leaf {
+  position: absolute; top: -8vh; font-size: var(--s); opacity: var(--o); line-height: 1;
+  animation: rhss-tumble var(--t) linear var(--d) infinite;
+  will-change: transform;
+}
+@keyframes rhss-tumble {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(var(--x), 116vh, 0) rotate(var(--r)); }
+}
 
 .rhss-top { text-align: center; position: relative; }
 .rhss-time { font-size: calc(var(--u) * 21); font-weight: 200; line-height: 1; letter-spacing: 0.02em; }
-.rhss-date { font-size: calc(var(--u) * 4.8); color: #b9c8bb; margin-top: calc(var(--u) * 1.6); }
-.rhss-weather { font-size: calc(var(--u) * 4); color: #9fb3a4; margin-top: calc(var(--u) * 1.4); }
+.rhss-date { font-size: calc(var(--u) * 4.8); color: var(--soft); margin-top: calc(var(--u) * 1.6); }
+.rhss-weather { font-size: calc(var(--u) * 4); color: var(--softer); margin-top: calc(var(--u) * 1.4); }
 .rhss-weather:empty { display: none; }
 .rhss-count {
   font-family: "P052", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
@@ -100,10 +147,10 @@
 .rhss-card.on { opacity: 1; }
 .rhss-photo {
   width: calc(var(--u) * 88); aspect-ratio: 4 / 5; border-radius: calc(var(--u) * 4);
-  overflow: hidden; position: relative; background: #0b1f15;
-  border: calc(var(--u) * 0.35) solid rgba(217, 180, 74, 0.75);
+  overflow: hidden; position: relative; background: var(--photo-bg);
+  border: calc(var(--u) * 0.35) solid var(--gold-line);
   box-shadow: 0 calc(var(--u) * 3) calc(var(--u) * 10) rgba(0, 0, 0, 0.55),
-              0 0 calc(var(--u) * 8) rgba(217, 180, 74, 0.18);
+              0 0 calc(var(--u) * 8) var(--gold-glow);
 }
 /* Ken Burns runs regardless of .on (restarted on refill, while the card is
    still invisible) so a fading-out card doesn't snap back to scale 1. */
@@ -116,14 +163,16 @@
   width: calc(var(--u) * 66); height: calc(var(--u) * 66); border-radius: 50%; position: relative;
   display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 28);
   margin: calc(var(--u) * 14) 0 calc(var(--u) * 10);
-  background: radial-gradient(circle at 35% 30%, #ff8a8a 0, #b3263a 38%, #5c0f1b 100%);
-  box-shadow: inset 0 0 calc(var(--u) * 6) rgba(0,0,0,.45), 0 0 calc(var(--u) * 10) rgba(179,38,58,.45);
+  background: radial-gradient(circle at 35% 30%, var(--accent-hi) 0, var(--accent) 38%, var(--accent-lo) 100%);
+  box-shadow: inset 0 0 calc(var(--u) * 6) rgba(0,0,0,.45),
+              0 0 calc(var(--u) * 10) var(--accent-glow);
 }
 .rhss-ornament::before {
   content: ""; position: absolute; top: calc(var(--u) * -4); width: calc(var(--u) * 12);
   height: calc(var(--u) * 6); border-radius: calc(var(--u) * 1.2);
   background: linear-gradient(#f3d77c, #a8801f);
 }
+.rhss-chip:empty { display: none; }
 .rhss-chip {
   margin-top: calc(var(--u) * 5); padding: calc(var(--u) * 1.1) calc(var(--u) * 3);
   border-radius: 999px; font-size: calc(var(--u) * 3.6); font-weight: 600; letter-spacing: 0.02em;
@@ -135,7 +184,7 @@
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); max-width: calc(var(--u) * 90);
 }
 .rhss-blurb {
-  font-size: calc(var(--u) * 4.4); line-height: 1.3; color: #c9d8cc;
+  font-size: calc(var(--u) * 4.4); line-height: 1.3; color: var(--blurb);
   margin-top: calc(var(--u) * 2.4); max-width: calc(var(--u) * 82);
 }
 .rhss-meta { font-size: calc(var(--u) * 3.6); color: var(--gold); margin-top: calc(var(--u) * 2.6); }
@@ -146,7 +195,7 @@
 .rhss-toast {
   position: fixed; left: 50%; bottom: calc(var(--u) * 5); z-index: 2147483645;
   width: calc(var(--u) * 94); transform: translateX(-50%);
-  background: rgba(9, 28, 19, 0.97); color: var(--cream);
+  background: var(--toast-bg); color: var(--cream);
   border: calc(var(--u) * 0.3) solid var(--gold); border-radius: calc(var(--u) * 4);
   box-shadow: 0 calc(var(--u) * 2) calc(var(--u) * 9) rgba(0, 0, 0, 0.6);
   padding: calc(var(--u) * 3); display: flex; flex-direction: column; gap: calc(var(--u) * 2.6);
@@ -156,7 +205,7 @@
 .rhss-toast .rt-row { display: flex; gap: calc(var(--u) * 3); align-items: center; }
 .rhss-toast .rt-thumb {
   width: calc(var(--u) * 20); height: calc(var(--u) * 20); border-radius: calc(var(--u) * 2.4);
-  flex: none; object-fit: cover; background: #b3263a; display: flex; align-items: center;
+  flex: none; object-fit: cover; background: var(--accent); display: flex; align-items: center;
   justify-content: center; font-size: calc(var(--u) * 10);
 }
 .rhss-toast .rt-text { flex: 1; min-width: 0; }
@@ -172,7 +221,7 @@
   background: rgba(246, 238, 219, 0.12); color: var(--cream); cursor: pointer;
 }
 .rhss-toast button:active { filter: brightness(1.3); }
-.rhss-toast .rt-add { flex: 1; background: #b3263a; color: #fff; font-weight: 600; }
+.rhss-toast .rt-add { flex: 1; background: var(--accent); color: #fff; font-weight: 600; }
 .rhss-toast .rt-add:disabled { background: #2f6f45; opacity: 1; }
 .rhss-toast .rt-close { width: calc(var(--u) * 11.5); padding: 0; }
 `;
@@ -184,16 +233,35 @@
     return r ? `${h} hr ${r} min` : `${h} hr`;
   }
 
-  function countdown(now) {
-    const m = now.getMonth(), d = now.getDate();
-    if (m === 11 && d === 24) return "🎄 It's Christmas Eve";
-    if (m === 11 && d === 25) return "🎄 Merry Christmas!";
-    if (m === 11 && d === 31) return "🥂 Happy New Year's Eve";
-    if (m === 0 && d === 1) return "🥂 Happy New Year!";
-    if ((m === 11 && d > 25) || m === 0) return "✨ Happy holidays";
-    const today = new Date(now.getFullYear(), m, d);
-    const days = Math.round((new Date(now.getFullYear(), 11, 25) - today) / 86400000);
-    return days === 1 ? "🎄 One more sleep till Christmas" : `🎄 ${days} sleeps till Christmas`;
+  // The deck's big day in a given year: "MM-DD", or a rule such as
+  // {month: 11, weekday: 4, nth: 4} — the 4th Thursday of November.
+  function targetDate(to, year) {
+    if (typeof to === "string") {
+      const [month, day] = to.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+    const first = new Date(year, to.month - 1, 1);
+    const firstWeekday = first.getDay() || 7; // 1 = Monday … 7 = Sunday
+    const day = 1 + ((to.weekday - firstWeekday + 7) % 7) + (to.nth - 1) * 7;
+    return new Date(year, to.month - 1, day);
+  }
+
+  // The line under the clock: an exact-date message if the deck has one for
+  // today, else "N days to go" ("today" on the day itself — for a day with no
+  // fixed date), else the deck's "after" line once the day has passed. A season can straddle New Year, so the day that counts is whichever
+  // occurrence is nearest to today.
+  function countdown(cd, now) {
+    if (!cd) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    const special = cd.days && cd.days[`${pad(now.getMonth() + 1)}-${pad(now.getDate())}`];
+    if (special) return special;
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const days = [-1, 0, 1]
+      .map((dy) => Math.round((targetDate(cd.to, today.getFullYear() + dy) - today) / 86400000))
+      .reduce((best, d) => (Math.abs(d) < Math.abs(best) ? d : best));
+    if (days === 0 && cd.today) return cd.today;
+    if (days <= 0) return cd.after || "";
+    return days === 1 ? cd.one : cd.many.replace("{n}", days);
   }
 
   function shuffle(list) {
@@ -247,10 +315,8 @@
         <div class="rhss-count"></div>
       </div>
       <div class="rhss-stage"></div>
-      <div class="rhss-hint">Tap to wake — then ＋ to add it to My Recipes</div>`;
+      <div class="rhss-hint"></div>`;
     const q = (sel) => view.querySelector(sel);
-    buildLights(q(".rhss-lights"));
-    buildSnow(q(".rhss-snow"));
     const cards = [makeCard(), makeCard()];
     cards.forEach((c) => q(".rhss-stage").appendChild(c.node));
     scrim.appendChild(view);
@@ -263,6 +329,8 @@
     let gen = 0;            // bumps on every start/stop; stale async work checks it
     let running = false;
     let deck = null;
+    let ui = {};            // the active deck's look and wording (deck.ui)
+    const built = {};       // effect name -> its nodes exist already
     let order = [];
     let pos = 0;
     let front = 0;          // index into cards[] of the visible card
@@ -302,6 +370,7 @@
         return;
       }
       hideToast();
+      applyTheme(deck.ui || {});
       order = shuffle(deck.items);
       pos = 0;
       tickClock();
@@ -329,6 +398,32 @@
       if (state !== "clock") return;
       stop();
       start();
+    }
+
+    // Dress the view (and the after-wake toast) for this deck: colours as CSS
+    // custom properties, effects built the first time a deck asks for them.
+    function applyTheme(next) {
+      ui = next;
+      const vars = paletteVars(ui.palette || {});
+      for (const node of [view, toast]) {
+        for (const prop of THEME_VARS) {
+          if (prop in vars) node.style.setProperty(prop, vars[prop]);
+          else node.style.removeProperty(prop); // back to the stylesheet default
+        }
+      }
+      const effects = ui.effects || [];
+      const lights = q(".rhss-lights"), fall = q(".rhss-snow");
+      lights.hidden = !effects.includes("lights");
+      if (!lights.hidden && !built.lights) { buildLights(lights); built.lights = true; }
+      // Snow and leaves share one layer; a deck uses one or the other.
+      const falling = effects.includes("snow") ? "snow" : effects.includes("leaves") ? "leaves" : null;
+      fall.hidden = !falling;
+      if (falling && built.fall !== falling) {
+        fall.replaceChildren();
+        (falling === "snow" ? buildSnow : buildLeaves)(fall);
+        built.fall = falling;
+      }
+      q(".rhss-hint").textContent = ui.hint || "Tap to wake";
     }
 
     // --------------------------------------------------------------- cards
@@ -377,15 +472,16 @@
     }
 
     async function fillCard(card, item) {
-      const cat = CATEGORY[item.category] || CATEGORY.main;
-      card.chip.textContent = cat.label;
-      card.chip.style.setProperty("--chip", cat.color);
+      const cat = (ui.categories || {})[item.category];
+      card.chip.textContent = cat ? cat.label : "";
+      if (cat) card.chip.style.setProperty("--chip", cat.color);
       card.name.textContent = item.name;
       card.blurb.textContent = item.blurb;
       const meta = [];
       if (item.total_time_s) meta.push(`⏱ ${fmtMinutes(item.total_time_s)}`);
       if (item.yields) meta.push(String(item.yields));
-      if (item.saved) meta.push("✓ In My Recipes");
+      // Only worth saying where a card *can* be added (a seasonal deck).
+      if (item.saved && deck.addable) meta.push("✓ In My Recipes");
       card.meta.textContent = meta.join("  ·  ");
       let src = null;
       if (item.image) {
@@ -403,7 +499,7 @@
       } else {
         card.photo.hidden = true;
         card.ornament.hidden = false;
-        card.ornament.textContent = item.emoji || "🎄";
+        card.ornament.textContent = item.emoji || ui.default_emoji || "🍽";
       }
     }
 
@@ -432,7 +528,7 @@
       const now = new Date();
       q(".rhss-time").textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       q(".rhss-date").textContent = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
-      q(".rhss-count").textContent = deck && deck.theme === "christmas" ? countdown(now) : "";
+      q(".rhss-count").textContent = countdown(ui.countdown, now);
     }
 
     async function loadWeather() {
@@ -470,9 +566,11 @@
         img.src = cached;
         thumbSlot.replaceWith(img);
       } else {
-        thumbSlot.textContent = item.emoji || "🎄";
+        thumbSlot.textContent = item.emoji || ui.default_emoji || "🍽";
       }
       const add = toast.querySelector(".rt-add");
+      // The saved-recipes deck is the user's own: nothing to add, only View.
+      add.hidden = !(deck && deck.addable);
       const markSaved = (text) => { add.textContent = text; add.disabled = true; };
       if (item.saved) markSaved("✓ In My Recipes");
       else add.textContent = "＋ Add to My Recipes";
@@ -560,6 +658,21 @@
       flake.style.setProperty("--d", `${-Math.random() * dur}s`); // already mid-fall at start
       flake.style.setProperty("--x", `${(Math.random() - 0.5) * 18}vw`);
       host.appendChild(flake);
+    }
+  }
+
+  function buildLeaves(host) {
+    for (let i = 0; i < 14; i++) {
+      const leaf = el("span", "rhss-leaf", LEAVES[i % LEAVES.length]);
+      const dur = 16 + Math.random() * 16;
+      leaf.style.left = `${Math.random() * 100}%`;
+      leaf.style.setProperty("--s", `${18 + Math.random() * 20}px`);
+      leaf.style.setProperty("--o", (0.35 + Math.random() * 0.45).toFixed(2));
+      leaf.style.setProperty("--t", `${dur}s`);
+      leaf.style.setProperty("--d", `${-Math.random() * dur}s`);
+      leaf.style.setProperty("--x", `${(Math.random() - 0.5) * 30}vw`);
+      leaf.style.setProperty("--r", `${(Math.random() < 0.5 ? -1 : 1) * (240 + Math.random() * 480)}deg`);
+      host.appendChild(leaf);
     }
   }
 

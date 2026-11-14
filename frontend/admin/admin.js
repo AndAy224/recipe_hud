@@ -204,7 +204,7 @@ const SETTINGS_FIELDS = [
   "idle_timeout_s", "clock_to_off_s", "night_mode_enabled", "night_dim_enabled",
   "night_off_start", "night_off_end", "night_idle_timeout_s", "alarm_volume",
   "theme", "weather_location", "display_output", "touch_device",
-  "screensaver_enabled", "backlight_control", "brightness_active", "brightness_night_pct",
+  "screensaver_enabled", "screensaver_saved_enabled", "backlight_control", "brightness_active", "brightness_night_pct",
   "brightness_off", "wine_pairing_enabled", "alarm_auto_dismiss_s", "recipe_cache_max_age_days",
 ];
 
@@ -292,7 +292,7 @@ function renderLive(display) {
       : ` · backlight: n/a (${bl.error || "unavailable"})`;
     $("live-display").textContent =
       `Display: ${display.power ? "on" : "off"} · state: ${display.state}` +
-      `${display.screensaver ? " (holiday screensaver)" : ""}` +
+      `${display.screensaver ? " (seasonal screensaver)" : ""}` +
       ` · backend: ${display.backend}${display.night ? " · night window" : ""}${backlight}${inhibitors}`;
   }
   $("live-timers").replaceChildren(...timers.map((t) => {

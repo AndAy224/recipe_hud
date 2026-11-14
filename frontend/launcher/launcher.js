@@ -162,8 +162,9 @@ function renderMyRecipes() {
 }
 
 // --------------------------------------------------------- holiday ideas
-// The screensaver deck, browsable while awake: the calm place to save a card
-// (the after-wake toast is the other). Hidden out of season.
+// The seasonal screensaver deck, browsable while awake: the calm place to save
+// a card (the after-wake toast is the other). Hidden out of season — the
+// out-of-season deck is the user's own saved recipes, which are already above.
 
 let holidayItems = [];
 
@@ -172,7 +173,9 @@ async function loadHolidayIdeas() {
   try {
     deck = await (await fetch("/api/screensaver")).json();
   } catch { /* backend unreachable */ }
-  holidayItems = (deck && deck.active && deck.items) || [];
+  const seasonal = deck && deck.active && deck.kind === "seasonal";
+  holidayItems = seasonal ? deck.items : [];
+  $("holiday-title").textContent = (seasonal && deck.ui && deck.ui.ideas_title) || "Seasonal ideas";
   renderHolidayIdeas();
 }
 
@@ -561,7 +564,7 @@ const ws = new WSClient("launcher", (type, data) => {
   } else if (type === "settings.updated") {
     Object.assign(settings, data);
     renderKeepAwake(); applyTheme(); applyNight();
-    if ("screensaver_enabled" in data) {
+    if ("screensaver_enabled" in data || "screensaver_saved_enabled" in data) {
       loadHolidayIdeas();
       getFallbackSaver()?.refresh();
     }

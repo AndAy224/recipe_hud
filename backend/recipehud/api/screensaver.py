@@ -15,13 +15,9 @@ class AddBody(BaseModel):
 
 @router.get("")
 async def get_deck(request: Request):
-    """{active, theme, items}. `active` is false out of season or when the
-    screensaver is switched off — clients then show the plain clock."""
-    deck = screensaver.active_deck(request.app.state.store)
-    if not deck:
-        return {"active": False, "theme": None, "items": []}
-    items = await screensaver.deck_items(request.app.state.db, deck)
-    return {"active": bool(items), "theme": deck["theme"], "items": items}
+    """{active, kind, theme, addable, ui, items} — see screensaver.current_deck.
+    `active` is false when nothing should replace the plain clock."""
+    return await screensaver.current_deck(request.app.state.db, request.app.state.store)
 
 
 @router.post("/add")

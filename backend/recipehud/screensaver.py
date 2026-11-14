@@ -6,6 +6,16 @@ one is in season (and `screensaver_enabled`), the idle CLOCK state renders it
 as a rotating photo screensaver and stops timing out to OFF in the daytime
 (see idle.py).
 
+A deck is data, not code: its `ui` block carries everything the screensaver
+shows that is specific to it (category labels, colours, effects, the
+countdown line), so a new season is a new JSON file. When seasons overlap the
+deck with the highest `priority` wins.
+
+Out of season there is a second, built-in deck: the user's own saved recipes
+(`saved_deck`, setting `screensaver_saved_enabled`). It only changes what the
+CLOCK state looks like — unlike a seasonal deck it does not hold the screen
+on, so CLOCK still times out to OFF as usual.
+
 Photos come from the normal extraction cache: `warm()` runs each deck URL
 through extract() + snapshot_image() so every card has a *local* /media copy.
 Cards never hotlink the source CDN — the overlay paints them on arbitrary
@@ -19,6 +29,7 @@ import asyncio
 import datetime
 import json
 import logging
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -35,6 +46,29 @@ CATEGORIES = ("drink", "main", "side", "dessert")
 # Tag added (with "christmas"/the deck's tag) when a card is saved.
 CATEGORY_TAGS = {"drink": "drinks", "main": "mains", "side": "sides", "dessert": "dessert"}
 
+EFFECTS = ("lights", "snow", "leaves")
+_HEX = re.compile(r"#[0-9a-fA-F]{3,8}")
+_MM_DD = re.compile(r"\d{2}-\d{2}")
+
+# The saved-recipes deck needs a few photos to be worth rotating.
+SAVED_DECK_MIN = 3
+SAVED_DECK_MAX = 60
+SAVED_UI = {
+    "ideas_title": "",
+    "hint": "Tap to wake",
+    "default_emoji": "🍽",
+    "categories": {},
+    "palette": {
+        "bg": ["#2b3140", "#171a22", "#0a0b0f"],
+        "gold": "#e0a15f",
+        "cream": "#f2f0eb",
+        "soft": "#b4bac6",
+        "accent": "#e07a5f",
+    },
+    "effects": [],
+    "countdown": None,
+}
+
 WARM_DELAY_S = 90        # let boot settle before fetching anything
 WARM_EVERY_S = 24 * 3600
 WARM_GAP_S = 3           # between fetches: polite to the sites, light on the Pi
@@ -44,12 +78,79 @@ def _month_day(value: str) -> tuple[int, int]:
     return int(month), int(day)
 
 
+def _validate_ui(ui: dict, where: str) -> dict:
+    """Normalize a deck's `ui` block, failing loudly on a typo. A bad deck
+    should stop the backend at startup, not render a half-themed screensaver."""
+    def fail(reason: str):
+        raise ValueError(f"{where}: ui.{reason}")
+
+    if not isinstance(ui, dict):
+        fail("must be an object")
+    out = {
+        "ideas_title": str(ui.get("ideas_title") or ""),
+        "hint": str(ui.get("hint") or "Tap to wake"),
+        "default_emoji": str(ui.get("default_emoji") or "🍽"),
+        "categories": {},
+        "palette": {},
+        "effects": [],
+        "countdown": None,
+    }
+    for key, cat in (ui.get("categories") or {}).items():
+        if key not in CATEGORIES:
+            fail(f"categories has unknown category {key!r}")
+        if not isinstance(cat, dict) or not cat.get("label") or not _HEX.fullmatch(str(cat.get("color", ""))):
+            fail(f"categories.{key} needs a label and a #hex color")
+        out["categories"][key] = {"label": str(cat["label"]), "color": cat["color"]}
+    palette = ui.get("palette") or {}
+    for key, value in palette.items():
+        if key == "bg":
+            if not (isinstance(value, list) and len(value) == 3 and all(_HEX.fullmatch(str(v)) for v in value)):
+                fail("palette.bg must be three #hex colours (top, middle, bottom)")
+        elif key in ("gold", "cream", "soft", "accent"):
+            if not _HEX.fullmatch(str(value)):
+                fail(f"palette.{key} must be a #hex colour")
+        else:
+            fail(f"palette has unknown key {key!r}")
+        out["palette"][key] = value
+    for effect in ui.get("effects") or []:
+        if effect not in EFFECTS:
+            fail(f"effects has unknown effect {effect!r} (known: {', '.join(EFFECTS)})")
+        out["effects"].append(effect)
+    countdown = ui.get("countdown")
+    if countdown:
+        to = countdown.get("to")
+        if isinstance(to, dict):
+            # e.g. {"month": 11, "weekday": 4, "nth": 4}: 4th Thursday of November
+            # (weekday 1 = Monday … 7 = Sunday).
+            if not (1 <= to.get("month", 0) <= 12 and 1 <= to.get("weekday", 0) <= 7
+                    and 1 <= to.get("nth", 0) <= 5):
+                fail("countdown.to rule needs month 1-12, weekday 1-7 (Mon-Sun), nth 1-5")
+        elif not (isinstance(to, str) and _MM_DD.fullmatch(to)):
+            fail("countdown.to must be MM-DD or a {month, weekday, nth} rule")
+        if "{n}" not in str(countdown.get("many", "")):
+            fail("countdown.many must contain {n}")
+        days = countdown.get("days") or {}
+        if not all(_MM_DD.fullmatch(str(k)) for k in days):
+            fail("countdown.days keys must be MM-DD")
+        out["countdown"] = {
+            "to": to,
+            "many": str(countdown["many"]),
+            "one": str(countdown.get("one") or countdown["many"].replace("{n}", "1")),
+            "days": {str(k): str(v) for k, v in days.items()},
+            "today": str(countdown.get("today") or ""),
+            "after": str(countdown.get("after") or ""),
+        }
+    return out
+
+
 @lru_cache
 def load_decks() -> tuple[dict, ...]:
     decks = []
     for path in sorted(DECK_DIR.glob("*.json")):
         deck = json.loads(path.read_text(encoding="utf-8"))
         deck.setdefault("theme", path.stem)
+        deck["priority"] = int(deck.get("priority", 0))
+        deck["ui"] = _validate_ui(deck.get("ui") or {}, path.name)
         deck["start"] = _month_day(deck["season"]["start"])
         deck["end"] = _month_day(deck["season"]["end"])
         for item in deck["items"]:
@@ -72,10 +173,9 @@ def active_deck(store: SettingsStore, today: datetime.date | None = None) -> dic
     if not store.get("screensaver_enabled"):
         return None
     today = today or datetime.date.today()
-    for deck in load_decks():
-        if deck["items"] and in_season(deck, today):
-            return deck
-    return None
+    candidates = [deck for deck in load_decks() if deck["items"] and in_season(deck, today)]
+    # Overlapping seasons: the highest priority wins (file order breaks a tie).
+    return max(candidates, key=lambda deck: deck["priority"], default=None)
 
 
 def deck_category(url: str) -> str | None:
@@ -126,6 +226,54 @@ async def deck_items(db: Database, deck: dict) -> list[dict]:
             "yields": item["yields"] if "yields" in item else row.get("yields"),
         })
     return items
+
+
+async def saved_deck_items(db: Database) -> list[dict]:
+    """The out-of-season deck: the user's own saved recipes that have a local
+    photo, newest first. Same item shape as deck_items()."""
+    rows = await db.fetchall(
+        "SELECT url, title, total_time_s, yields, image_local, source_host, meta_json "
+        "FROM recipe_cache WHERE saved = 1 AND kind = 'recipe' AND image_local IS NOT NULL "
+        "ORDER BY saved_at DESC LIMIT ?", (SAVED_DECK_MAX,))
+    items = []
+    for row in rows:
+        meta = json.loads(row["meta_json"]) if row["meta_json"] else {}
+        user = meta.get("user") if isinstance(meta.get("user"), dict) else {}
+        note = " ".join(str(user.get("notes") or "").split())
+        # The cook's own note is the best one-liner there is; else say where it's from.
+        blurb = (note[:117] + "…" if len(note) > 118 else note) or f"from {row['source_host']}"
+        items.append({
+            "url": row["url"],
+            "name": row["title"],
+            "category": None,
+            "emoji": SAVED_UI["default_emoji"],
+            "blurb": blurb,
+            "image": local_image_url(row),
+            "saved": True,
+            "total_time_s": row["total_time_s"],
+            "yields": row["yields"],
+        })
+    return items
+
+
+async def current_deck(db: Database, store: SettingsStore) -> dict:
+    """What the CLOCK screen should show right now, as the API payload:
+    {active, kind, theme, addable, ui, items}. `kind` is "seasonal" (a deck in
+    season — holds the screen on, cards can be added to My Recipes) or "saved"
+    (the user's own recipes — purely cosmetic); inactive means the plain clock."""
+    deck = active_deck(store)
+    if deck:
+        items = await deck_items(db, deck)
+        if items:
+            return {"active": True, "kind": "seasonal", "theme": deck["theme"],
+                    "addable": True, "ui": deck["ui"], "items": items}
+    elif store.get("screensaver_saved_enabled"):
+        items = await saved_deck_items(db)
+        if len(items) >= SAVED_DECK_MIN:
+            return {"active": True, "kind": "saved", "theme": "saved",
+                    "addable": False, "ui": SAVED_UI, "items": items}
+    return {"active": False, "kind": None, "theme": None, "addable": False,
+            "ui": None, "items": []}
 
 
 async def warm(db: Database, store: SettingsStore) -> dict:

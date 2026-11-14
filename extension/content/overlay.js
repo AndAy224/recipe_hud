@@ -438,7 +438,7 @@ button:active { filter: brightness(1.3); }
         nightDimEnabled = !!data.night_dim_enabled;
         applyNight();
       }
-      if ("screensaver_enabled" in data && saver) saver.refresh();
+      if (("screensaver_enabled" in data || "screensaver_saved_enabled" in data) && saver) saver.refresh();
     } else if (type === "navigate") {
       location.href = data.url;
     }

@@ -33,6 +33,9 @@ DEFAULTS: dict = {
     # one is in season it is how the CLOCK state looks, and CLOCK stops timing
     # out to OFF in the daytime — night still goes black via the night window.
     "screensaver_enabled": True,
+    # Out of season, show the user's own saved recipes on the CLOCK screen
+    # instead of the plain clock. Cosmetic only: CLOCK still times out to OFF.
+    "screensaver_saved_enabled": True,
     # Backlight over DDC/CI (display_ctl/ddc.py). brightness_active is the
     # panel's own 0-100 value; it is adopted from the panel on the first probe
     # (see DdcBacklight) so taking control never changes what people are used
@@ -145,6 +148,7 @@ VALIDATORS: dict = {
     "weather_location": _lat_lon,
     "wine_pairing_enabled": _bool,
     "screensaver_enabled": _bool,
+    "screensaver_saved_enabled": _bool,
     "backlight_control": _bool,
     "brightness_active": _int(0, 100),
     "brightness_night_pct": _int(0, 100),

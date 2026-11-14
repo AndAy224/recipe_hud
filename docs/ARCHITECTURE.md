@@ -64,15 +64,24 @@ a shorter timeout. Wake comes from any client's activity ping or from the
 evdev touch listener (works while the panel is dark). The scrim swallows the
 wake tap so it can't press a random button on the page beneath.
 
-**Holiday screensaver**: a deck (`backend/recipehud/decks/*.json`) is a
-curated list of real recipe URLs with a short name, category and blurb, plus
-the date window it is in season (Christmas: Nov 1 – Jan 6). While one is in
-season and `screensaver_enabled`, the CLOCK state *is* the screensaver — a
-rotating photo card per recipe over the clock — and CLOCK stops timing out to
-OFF in the daytime; the night window still blacks it out, and when the window
-ends an OFF panel returns to the screensaver on its own. No new display state:
-clients fetch `GET /api/screensaver` on entering CLOCK and fall back to the
-plain clock when it isn't active. The UI has a single source,
+**Seasonal screensaver**: a deck (`backend/recipehud/decks/*.json`) is a
+curated list of real recipe URLs plus the date window it is in season and a
+`ui` block — category labels, palette, effects (`lights`, `snow`, `leaves`),
+the hint and the countdown line (`to` a fixed `MM-DD` or a `{month, weekday,
+nth}` rule such as the 4th Thursday of November). Nothing season-specific
+lives in code: a new season is a new JSON file, validated at load (a typo
+stops the backend rather than half-theming the screen). Where seasons overlap
+the highest `priority` wins — Thanksgiving (20) takes November out of
+Christmas (10). While a deck is in season and `screensaver_enabled`, CLOCK is
+the screensaver — a rotating photo card per recipe over the clock — and CLOCK
+stops timing out to OFF in the daytime; the night window still blacks it out,
+and when the window ends an OFF panel returns to the screensaver on its own.
+No new display state: clients fetch `GET /api/screensaver`
+(`{active, kind, theme, addable, ui, items}`) on entering CLOCK and fall back
+to the plain clock when it isn't active. Out of season the same endpoint
+serves a built-in deck of the user's own saved recipes (`kind: "saved"`,
+setting `screensaver_saved_enabled`); that one is cosmetic — it does not hold
+the screen, so CLOCK still times out to OFF. The UI has a single source,
 `extension/content/screensaver.js`: the overlay runs it as a content script,
 and the launcher's no-extension fallback loads the same file from
 `/ext/screensaver.js`. Photos are local `/media` snapshots (a boot-time warm
@@ -80,8 +89,9 @@ pass extracts each deck URL and snapshots its image) fetched as blobs, so they
 work offline and no recipe site's CSP can block them. Nothing on the
 screensaver is tappable — the evdev watcher wakes on touch-down before
 Chromium would deliver a click — so a card is saved from the toast that
-appears right after a wake, or from the launcher's "Holiday ideas" section
-(`POST /api/screensaver/add`, which tags it `christmas` + its category).
+appears right after a wake, or from the launcher's ideas row
+(`POST /api/screensaver/add`, which tags it with the deck's tag + its
+category).
 
 **Backlight**: DPMS-off can't be used on this panel (it powers the touch
 controller), but DDC/CI brightness can: `display_ctl/ddc.py` drives VCP 0x10

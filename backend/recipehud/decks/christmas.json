@@ -5,7 +5,48 @@
     "start": "11-01",
     "end": "01-06"
   },
+  "priority": 10,
   "_comment": "Every url must extract as kind=recipe with an image (curl /api/recipe/extract?url=...&refresh=1). Optional yields/total_time_s override the extracted values (null hides them).",
+  "ui": {
+    "_comment": "Everything the screensaver shows that is specific to this deck. Optional 'palette' ({bg: [top, mid, bottom], gold, cream, soft, accent} as #hex) recolours it; without one the built-in Christmas colours are used. effects: lights, snow, leaves. countdown: 'to' is MM-DD or a {month, weekday, nth} rule (weekday 1=Mon..7=Sun), 'many' takes {n}, 'days' are exact-date overrides, 'today' shows on the day itself, 'after' once it has passed.",
+    "ideas_title": "🎄 Holiday ideas",
+    "hint": "Tap to wake — then ＋ to add it to My Recipes",
+    "default_emoji": "🎄",
+    "categories": {
+      "drink": {
+        "label": "🍸 Holiday cocktail",
+        "color": "#9e1f33"
+      },
+      "main": {
+        "label": "🍖 Christmas dinner",
+        "color": "#7a4d0e"
+      },
+      "side": {
+        "label": "🥔 On the side",
+        "color": "#245c38"
+      },
+      "dessert": {
+        "label": "🍪 Sweet treat",
+        "color": "#6b2752"
+      }
+    },
+    "effects": [
+      "lights",
+      "snow"
+    ],
+    "countdown": {
+      "to": "12-25",
+      "many": "🎄 {n} sleeps till Christmas",
+      "one": "🎄 One more sleep till Christmas",
+      "days": {
+        "12-24": "🎄 It's Christmas Eve",
+        "12-25": "🎄 Merry Christmas!",
+        "12-31": "🥂 Happy New Year's Eve",
+        "01-01": "🥂 Happy New Year!"
+      },
+      "after": "✨ Happy holidays"
+    }
+  },
   "items": [
     {
       "url": "https://www.food.com/recipe/classic-eggnog-208276",
