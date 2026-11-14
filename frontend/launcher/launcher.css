@@ -110,8 +110,10 @@ h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-s
 .holiday-tile .rt-host {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* Top-LEFT: the extension's floating toolbar is pinned to the right edge at
+   mid-screen and would sit on a right-hand corner button. */
 .holiday-tile .ht-add {
-  position: absolute; top: 0.6rem; right: 0.6rem; min-height: 0;
+  position: absolute; top: 0.6rem; left: 0.6rem; min-height: 0;
   width: 64px; height: 64px; padding: 0; border-radius: 50%;
   font-size: 1.9rem; line-height: 1; background: #b3263a; color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
