@@ -87,7 +87,7 @@ def main() -> None:
                 results.append((name, "ERROR", str(exc)))
                 continue
             if resp.status_code == 422:
-                results.append((name, "FETCH", resp.json().get("detail", "")[:90]))
+                results.append((name, "FETCH", str(resp.json().get("detail", ""))[:90]))
             elif resp.status_code != 200:
                 results.append((name, "ERROR", f"HTTP {resp.status_code}"))
             else:
@@ -99,6 +99,11 @@ def main() -> None:
         counts[status] = counts.get(status, 0) + 1
         print(f"{name:<{width}}  {status:<7}  {note}")
     print("\nsummary:", ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    # FETCH is the site refusing us (bot wall, outage) — reported, not our bug.
+    # THIN/ERROR mean extraction itself came up short, and fail the run.
+    broken = counts.get("THIN", 0) + counts.get("ERROR", 0)
+    if broken:
+        raise SystemExit(f"{broken} site(s) extracted badly")
 
 
 if __name__ == "__main__":

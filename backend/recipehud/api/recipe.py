@@ -5,10 +5,36 @@ from collections import Counter
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..extractor import (
-    ExtractionError, delete_image_snapshot, extract, local_image_url, snapshot_image,
+    ExtractionError, canonical_url, delete_image_snapshot, extract, local_image_url,
+    snapshot_image,
 )
 from ..models import RecipeUrlBody, RenameBody, TagsBody
+from ..screensaver import deck_category
 from ..wine import is_drink, suggest_wine
+
+# A rule-table pairing cached while an API key is configured means the LLM
+# call failed that once (offline, timeout). Offer it, but try again after this
+# long instead of pinning the fallback to the recipe forever.
+RULE_RETRY_S = 3600
+
+
+def _query_url(url: str) -> str:
+    """Canonicalize a ?url= parameter the same way request bodies are."""
+    try:
+        return canonical_url(url)
+    except ValueError:
+        raise HTTPException(400, "URL must be a valid http(s) address")
+
+
+def _stale_fallback(pairing: dict, api_key: str) -> bool:
+    if pairing.get("source") != "rule" or not api_key:
+        return False
+    try:
+        made = datetime.datetime.fromisoformat(pairing["at"])
+    except (KeyError, TypeError, ValueError):
+        return True  # cached before timestamps existed
+    age = (datetime.datetime.now(datetime.timezone.utc) - made).total_seconds()
+    return age > RULE_RETRY_S
 
 router = APIRouter(prefix="/api/recipe", tags=["recipe"])
 
@@ -28,7 +54,8 @@ def _summary(row: dict) -> dict:
 def normalize_tags(tags: list[str]) -> list[str]:
     seen = []
     for tag in tags:
-        tag = tag.strip().lower()[:30]
+        # Tags are stored comma-joined, so a comma inside one would split it.
+        tag = " ".join(tag.replace(",", " ").split()).lower()[:30]
         if tag and tag not in seen:
             seen.append(tag)
     return seen[:10]
@@ -40,8 +67,7 @@ async def extract_recipe(
     url: str = Query(min_length=10),
     refresh: bool = False,
 ):
-    if not url.startswith(("http://", "https://")):
-        raise HTTPException(400, "URL must be http(s)")
+    url = _query_url(url)
     try:
         return await extract(request.app.state.db, request.app.state.store, url, refresh)
     except ExtractionError as exc:
@@ -59,6 +85,7 @@ async def wine_pairing(request: Request, url: str = Query(min_length=10), refres
     refresh=1 forces regeneration, overwriting any cached pairing — used by the
     clean view's Re-fetch button."""
     db = request.app.state.db
+    url = _query_url(url)
     row = await db.fetchone("SELECT * FROM recipe_cache WHERE url = ?", (url,))
     if not row:
         return {}
@@ -77,14 +104,22 @@ async def wine_pairing(request: Request, url: str = Query(min_length=10), refres
             await db.execute(
                 "UPDATE recipe_cache SET meta_json = ? WHERE url = ?", (json.dumps(meta), url))
         return {}
-    if not refresh and meta.get("wine_pairing"):
-        return meta["wine_pairing"]
+    cached = meta.get("wine_pairing")
+    api_key = request.app.state.cfg.anthropic_api_key
+    if cached and not refresh and not _stale_fallback(cached, api_key):
+        return cached
     pairing = await suggest_wine(recipe, request.app.state.cfg, request.app.state.store)
     if not pairing:
         return {}
-    meta["wine_pairing"] = pairing
-    await db.execute(
-        "UPDATE recipe_cache SET meta_json = ? WHERE url = ?", (json.dumps(meta), url))
+    pairing["at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    # Re-read before writing: the LLM call can take seconds, and a notes edit
+    # or re-fetch landing meanwhile must not be overwritten with a stale copy.
+    fresh = await db.fetchone("SELECT meta_json FROM recipe_cache WHERE url = ?", (url,))
+    if fresh is not None:
+        meta = json.loads(fresh["meta_json"]) if fresh["meta_json"] else {}
+        meta["wine_pairing"] = pairing
+        await db.execute(
+            "UPDATE recipe_cache SET meta_json = ? WHERE url = ?", (json.dumps(meta), url))
     return pairing
 
 
@@ -171,8 +206,12 @@ async def save_recipe(request: Request, body: RecipeUrlBody):
 @router.post("/unsave")
 async def unsave_recipe(request: Request, body: RecipeUrlBody):
     db = request.app.state.db
-    await delete_image_snapshot(db, str(body.url))
+    url = str(body.url)
+    # A screensaver card keeps its local photo: the deck shows it whether or
+    # not the recipe is saved, and the warm pass only re-fetches once a day.
+    if not deck_category(url):
+        await delete_image_snapshot(db, url)
     await db.execute(
-        "UPDATE recipe_cache SET saved = 0, saved_at = NULL WHERE url = ?", (str(body.url),))
+        "UPDATE recipe_cache SET saved = 0, saved_at = NULL WHERE url = ?", (url,))
     await request.app.state.hub.broadcast("recipes.updated", {})
     return {"ok": True}

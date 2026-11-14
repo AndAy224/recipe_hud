@@ -1,13 +1,14 @@
 """Generate README screenshots against a running dev backend (port 8000).
 Usage: python scripts/screenshots.py   (backend must run with RECIPEHUD_DEBUG=1)"""
 
+import os
 import time
 from pathlib import Path
 
 import httpx
 from playwright.sync_api import sync_playwright
 
-BASE = "http://127.0.0.1:8000"
+BASE = os.environ.get("RECIPEHUD_TEST_BASE", "http://127.0.0.1:8000")
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "docs" / "screenshots"
 RECIPE_URL = "https://www.budgetbytes.com/dragon-noodles/"
@@ -33,13 +34,16 @@ window.chrome = {
       onDisconnect: { addListener: () => {} },
       postMessage: () => {},
     }),
+    // The overlay asks the service worker to make its backend requests;
+    // there is none here, so every call reports "unreachable".
+    sendMessage: async () => ({ ok: false, status: 0 }),
   },
 };
 """
 
-# The page's CSP blocks main-world fetches to localhost (a real extension
-# content script isn't subject to it), so the panel's preset row comes back
-# empty in this harness; fill it with what the backend would have returned.
+# With no service worker to proxy its requests (see CHROME_STUB), the panel's
+# preset row comes back empty in this harness; fill it with what the backend
+# would have returned.
 FILL_PRESETS = """
 const presets = [["Soft eggs", "6:00"], ["Pasta", "9:00"], ["Rice", "15:00"], ["Pizza", "12:00"]];
 const row = window.__rhudRoot.querySelector(".presets");
@@ -55,22 +59,26 @@ PHONE = {"width": 400, "height": 820}
 DESKTOP = {"width": 860, "height": 1150}
 
 
-def setup_state() -> list[str]:
-    """Timers + saved recipe + active display so the shots look lived-in."""
+def setup_state() -> tuple[list[str], bool]:
+    """Timers + saved recipe + active display so the shots look lived-in.
+    Returns the timer ids and whether the recipe was saved by this run."""
     timer_ids = []
     with httpx.Client(base_url=BASE, timeout=30) as client:
+        already = any(r["url"] == RECIPE_URL for r in client.get("/api/recipe/saved").json())
         client.post("/api/recipe/save", json={"url": RECIPE_URL})
         for label, seconds in [("Pasta", 527), ("Sauce", 192)]:
             resp = client.post("/api/timers", json={"label": label, "seconds": seconds})
             timer_ids.append(resp.json()["id"])
         client.post("/api/debug/idle/active")
-    return timer_ids
+    return timer_ids, not already
 
 
-def cleanup(timer_ids: list[str]) -> None:
+def cleanup(timer_ids: list[str], unsave: bool) -> None:
     with httpx.Client(base_url=BASE, timeout=10) as client:
         for timer_id in timer_ids:
             client.post(f"/api/timers/{timer_id}/cancel")
+        if unsave:
+            client.post("/api/recipe/unsave", json={"url": RECIPE_URL})
         client.post("/api/debug/idle/active")
 
 
@@ -82,7 +90,7 @@ def shot(page, name: str) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    timer_ids = setup_state()
+    timer_ids, saved_here = setup_state()
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
@@ -165,7 +173,7 @@ def main() -> None:
 
             browser.close()
     finally:
-        cleanup(timer_ids)
+        cleanup(timer_ids, saved_here)
 
 
 if __name__ == "__main__":

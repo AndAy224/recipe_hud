@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # A staged restore must swap the DB before it is opened.
     backup.apply_pending_restore(CONFIG)
+    backup.clear_scratch(CONFIG)
     db = Database(CONFIG.db_path)
     await db.connect()
     store = SettingsStore(db)

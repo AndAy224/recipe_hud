@@ -1,4 +1,5 @@
 import json
+import re
 
 from .db import Database
 
@@ -47,6 +48,111 @@ DEFAULTS: dict = {
 SECRET_KEYS = {"admin_password_hash"}
 
 
+class SettingError(ValueError):
+    """A rejected setting value; str() is the user-facing reason."""
+
+    def __init__(self, key: str, reason: str):
+        super().__init__(f"{key}: {reason}")
+        self.key = key
+
+
+# -- validators: each takes the raw value and returns the cleaned one, or
+#    raises ValueError with a reason. The API is open and the idle loop reads
+#    these every second, so a bad value must be refused at the door rather
+#    than quietly misbehave (idle_timeout_s=0 put the panel back on the clock
+#    a second after every touch; a malformed night time silently disabled
+#    night mode; bool("false") is True).
+
+def _bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str) and value.strip().lower() in ("true", "1", "on", "yes"):
+        return True
+    if isinstance(value, str) and value.strip().lower() in ("false", "0", "off", "no", ""):
+        return False
+    raise ValueError("must be true or false")
+
+
+def _int(lo: int, hi: int):
+    def check(value):
+        if isinstance(value, bool):
+            raise ValueError("must be a whole number")
+        try:
+            number = int(str(value).strip())
+        except (TypeError, ValueError):
+            raise ValueError("must be a whole number") from None
+        if not lo <= number <= hi:
+            raise ValueError(f"must be between {lo} and {hi}")
+        return number
+    return check
+
+
+def _hhmm(value):
+    match = re.fullmatch(r"\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*", str(value))
+    if not match or int(match.group(1)) > 23 or int(match.group(2)) > 59:
+        raise ValueError("must be a time like 22:30")
+    return f"{int(match.group(1)):02d}:{match.group(2)}"
+
+
+def _choice(*options: str):
+    def check(value):
+        if value not in options:
+            raise ValueError(f"must be one of {', '.join(options)}")
+        return value
+    return check
+
+
+def _text(max_len: int):
+    def check(value):
+        text = str(value).strip()
+        if len(text) > max_len:
+            raise ValueError(f"must be at most {max_len} characters")
+        return text
+    return check
+
+
+def _lat_lon(value):
+    text = str(value).strip()
+    if not text:
+        return ""
+    try:
+        lat, lon = (float(part) for part in text.split(","))
+    except ValueError:
+        raise ValueError("must be empty or 'latitude,longitude'") from None
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError("latitude/longitude out of range")
+    return text
+
+
+VALIDATORS: dict = {
+    "idle_timeout_s": _int(1, 86400),
+    "clock_to_off_s": _int(1, 86400),
+    "night_mode_enabled": _bool,
+    "night_off_start": _hhmm,
+    "night_off_end": _hhmm,
+    "night_idle_timeout_s": _int(1, 86400),
+    "night_dim_enabled": _bool,
+    "panel_power_off": _bool,
+    "keep_awake": _bool,
+    "alarm_volume": _int(0, 100),
+    "alarm_auto_dismiss_s": _int(1, 86400),
+    "theme": _choice("dark", "light"),
+    "display_output": _text(64),
+    "touch_device": _text(128),
+    "recipe_cache_max_age_days": _int(1, 3650),
+    "weather_location": _lat_lon,
+    "wine_pairing_enabled": _bool,
+    "screensaver_enabled": _bool,
+    "backlight_control": _bool,
+    "brightness_active": _int(0, 100),
+    "brightness_night_pct": _int(0, 100),
+    "brightness_off": _int(0, 100),
+}
+assert set(VALIDATORS) == set(DEFAULTS), "every setting needs a validator"
+
+
 class SettingsStore:
     """All settings cached in memory; the idle loop reads them every second."""
 
@@ -76,19 +182,23 @@ class SettingsStore:
         self._listeners.append(listener)
 
     async def patch(self, updates: dict) -> dict:
-        """Apply updates for known keys; returns the changed subset."""
-        changed = {}
+        """Apply updates for known keys; returns the changed subset.
+
+        Values are validated and coerced (so "300" from a form works). All or
+        nothing: one bad value raises SettingError and nothing is applied.
+        Unknown keys are ignored."""
+        if not isinstance(updates, dict):
+            raise SettingError("settings", "expected an object of setting names to values")
+        cleaned = {}
         for key, value in updates.items():
             if key not in DEFAULTS:
                 continue
-            default = DEFAULTS[key]
-            # Coerce to the default's type so e.g. "300" from a form works.
-            if isinstance(default, bool):
-                value = bool(value)
-            elif isinstance(default, int) and not isinstance(value, bool):
-                value = int(value)
-            elif isinstance(default, str):
-                value = str(value)
+            try:
+                cleaned[key] = VALIDATORS[key](value)
+            except ValueError as exc:
+                raise SettingError(key, str(exc)) from None
+        changed = {}
+        for key, value in cleaned.items():
             if self._cache.get(key) != value:
                 self._cache[key] = value
                 changed[key] = value

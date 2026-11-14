@@ -1,0 +1,13 @@
+# Recipe HUD kiosk hardening — do not remove.
+#
+# Force Chromium to use its built-in ("basic") cookie store instead of the
+# system GNOME keyring / Secret Service. On this headless kiosk the keyring is
+# locked and pops a gcr-prompter password dialog that nobody can answer;
+# Chromium then blocks during cookie init, its network service wedges, and
+# EVERY page navigation hangs before it is even sent -> the launcher never
+# loads and the panel shows a blank white screen after boot.
+#
+# This lives in /etc/chromium.d (root-owned, not in the git checkout) on top of
+# the same flag in deploy/kiosk/start-kiosk.sh, so a `git reset --hard` from a
+# self-update cannot silently reintroduce the white screen.
+export CHROMIUM_FLAGS="$CHROMIUM_FLAGS --password-store=basic"

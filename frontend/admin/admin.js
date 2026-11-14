@@ -31,13 +31,14 @@ function renderSites() {
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
-      <span style="font-size:1.4rem">${site.icon || "🍽"}</span>
+      <span class="site-icon" style="font-size:1.4rem"></span>
       <span class="grow"><strong></strong><br><span class="sub"></span></span>
       <span class="sub">${site.open_mode === "clean" ? "✨ clean" : "direct"}</span>
       <button class="up" ${i === 0 ? "disabled" : ""}>↑</button>
       <button class="down" ${i === sites.length - 1 ? "disabled" : ""}>↓</button>
       <button class="edit">Edit</button>
       <button class="danger del">Delete</button>`;
+    div.querySelector(".site-icon").textContent = site.icon || "🍽";
     div.querySelector("strong").textContent = site.name;
     div.querySelector(".sub").textContent = site.url;
     div.querySelector(".up").onclick = () => moveSite(i, -1);
@@ -199,10 +200,19 @@ const SETTINGS_FIELDS = [
   "night_off_start", "night_off_end", "night_idle_timeout_s", "alarm_volume",
   "theme", "weather_location", "display_output", "touch_device",
   "screensaver_enabled", "backlight_control", "brightness_active", "brightness_night_pct",
-  "brightness_off",
+  "brightness_off", "wine_pairing_enabled", "alarm_auto_dismiss_s", "recipe_cache_max_age_days",
 ];
 
+// True while the form holds edits that haven't been saved. The WebSocket
+// re-sends a full snapshot on every reconnect; without this it refilled the
+// form and silently threw away whatever was being typed.
+let settingsDirty = false;
+for (const type of ["input", "change"]) {
+  $("settings-form").addEventListener(type, () => { settingsDirty = true; });
+}
+
 function fillSettings(settings) {
+  settingsDirty = false;
   const form = $("settings-form");
   for (const key of SETTINGS_FIELDS) {
     const input = form.elements[key];
@@ -460,7 +470,7 @@ new WSClient("admin", (type, data) => {
   if (type === "snapshot") {
     timers = data.timers;
     renderLive(data.display);
-    fillSettings(data.settings);
+    if (!settingsDirty) fillSettings(data.settings);
   } else if (type === "timer.tick") {
     timers = data; renderLive();
   } else if (type === "timer.created" || type === "timer.updated") {

@@ -264,15 +264,19 @@ function linkifyDurations(text, index) {
         ev.stopPropagation();
         const title = currentData.title || "Recipe";
         const short = title.length > 40 ? title.slice(0, 39).trimEnd() + "…" : title;
-        await fetch("/api/timers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            label: `${short} — step ${index + 1}`,
-            seconds,
-          }),
-        });
-        btn.textContent = `✓ ${full}`;
+        let started = false;
+        try {
+          const resp = await fetch("/api/timers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              label: `${short} — step ${index + 1}`,
+              seconds,
+            }),
+          });
+          started = resp.ok;
+        } catch { /* backend unreachable */ }
+        btn.textContent = started ? `✓ ${full}` : `⚠ ${full}`;
       };
       frag.appendChild(btn);
     } else {

@@ -38,9 +38,10 @@ function tileButton(site) {
   btn.className = "tile";
   btn.style.background = site.color || "var(--accent)";
   btn.innerHTML = `
-    <span class="tile-icon">${site.icon || "🍽"}</span>
+    <span class="tile-icon"></span>
     <span class="tile-name"></span>
     <span class="tile-mode">${site.open_mode === "clean" ? "✨ clean view" : ""}</span>`;
+  btn.querySelector(".tile-icon").textContent = site.icon || "🍽";
   btn.querySelector(".tile-name").textContent = site.name;
   btn.onclick = () => openSite(site);
   return btn;

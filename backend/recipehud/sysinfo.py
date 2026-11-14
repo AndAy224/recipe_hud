@@ -2,6 +2,7 @@
 every field degrades to None off the Pi (Windows dev, containers, etc.)."""
 
 import asyncio
+import functools
 import importlib.metadata
 import logging
 import os
@@ -35,7 +36,11 @@ def version() -> str:
         return "dev"
 
 
+@functools.cache
 def git_rev() -> str | None:
+    """Commit this process was started from. Cached: it is asked for on every
+    admin health poll, spawning git blocks the event loop, and the answer that
+    matters is "what code is running" — which only a restart changes."""
     repo = CONFIG.frontend_dir.parent
     try:
         out = subprocess.run(

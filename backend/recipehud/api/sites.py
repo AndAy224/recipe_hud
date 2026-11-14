@@ -27,7 +27,9 @@ async def create_site(request: Request, body: SiteIn):
 @router.patch("/{site_id}")
 async def update_site(request: Request, site_id: int, body: SiteUpdate):
     db = request.app.state.db
-    updates = body.model_dump(exclude_unset=True)
+    # An explicit null means "leave it": every column here is NOT NULL.
+    updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()
+               if value is not None}
     if "url" in updates:
         updates["url"] = str(updates["url"])
     if updates:

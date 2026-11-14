@@ -5,8 +5,17 @@
 #   bash deploy/install.sh
 set -euo pipefail
 
+# The script calls sudo itself where it needs root. Run as root (or under
+# sudo), the venv would be created root-owned — after which the self-update's
+# pip, which runs as the service user, can never write to it — and the labwc
+# autostart and kanshi config would land in /root instead of the kiosk user's home.
+if [ "$(id -u)" -eq 0 ]; then
+    echo "Run this as the desktop user, without sudo:  bash deploy/install.sh" >&2
+    exit 1
+fi
+
 TARGET=/opt/recipehud
-USER_NAME="${SUDO_USER:-$USER}"
+USER_NAME="$USER"
 USER_UID="$(id -u "$USER_NAME")"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -15,8 +24,14 @@ echo "== Recipe HUD install (user: $USER_NAME) =="
 echo "-- apt packages"
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
-    wlopm wlr-randr kanshi python3-venv python3-dev curl \
-    fonts-noto-color-emoji ddcutil
+    wlopm wlr-randr kanshi python3-venv python3-dev curl git rsync \
+    fonts-noto-color-emoji ddcutil libinput-tools
+# git + rsync: this script copies the checkout (with .git) into place, and the
+# self-update fetches into it. libinput-tools: the touch-device listing at the end.
+# The on-screen keyboard is the only way to type on the panel (recipe-site
+# search boxes, cook notes). Optional: older releases don't package it.
+sudo apt-get install -y --no-install-recommends squeekboard \
+    || echo "   (squeekboard not available; no on-screen keyboard)"
 # fonts-noto-color-emoji: the whole UI uses emoji as icons (site tiles, timers,
 # buttons). Without a color-emoji font they render blank on a fresh Pi.
 # ddcutil: backlight dimming over DDC/CI (display_ctl/ddc.py). The desktop user
@@ -44,12 +59,22 @@ if [ ! -d "$TARGET/.venv" ]; then
 fi
 "$TARGET/.venv/bin/pip" install --quiet --upgrade pip
 "$TARGET/.venv/bin/pip" install --quiet "$TARGET"
+# Tell the self-update which pyproject.toml these packages were installed from,
+# so it only runs pip again when the dependencies actually change.
+mkdir -p "$TARGET/data"
+sha256sum "$TARGET/pyproject.toml" | cut -d' ' -f1 > "$TARGET/data/deps.sha256"
 
 echo "-- permissions: add $USER_NAME to input group (touch wake)"
 sudo usermod -aG input "$USER_NAME"
 
 echo "-- seed database"
-RECIPEHUD_DB_PATH="$TARGET/data/recipehud.db" "$TARGET/.venv/bin/python" "$TARGET/scripts/seed_db.py"
+# First install only. seed_db.py fills any *empty* table, so on a re-run it
+# would bring the sample sites/presets back for someone who deleted them all.
+if [ ! -f "$TARGET/data/recipehud.db" ]; then
+    RECIPEHUD_DB_PATH="$TARGET/data/recipehud.db" "$TARGET/.venv/bin/python" "$TARGET/scripts/seed_db.py"
+else
+    echo "   database already exists; left as it is"
+fi
 
 echo "-- systemd backend service (rendered for user=$USER_NAME uid=$USER_UID)"
 # Render __USER__/__UID__ placeholders for the actual desktop user. Hardcoding
@@ -58,7 +83,20 @@ sed -e "s|__USER__|$USER_NAME|g" -e "s|__UID__|$USER_UID|g" \
     "$TARGET/deploy/systemd/recipehud-backend.service" \
     | sudo tee /etc/systemd/system/recipehud-backend.service >/dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable --now recipehud-backend.service
+sudo systemctl enable recipehud-backend.service
+# restart, not just start: on a re-run the service is already up and would
+# otherwise keep running the old code and the old unit environment.
+sudo systemctl restart recipehud-backend.service
+
+echo "-- chromium: never wait on the system keyring"
+# Second, git-independent copy of --password-store=basic (start-kiosk.sh has
+# the first). Without the flag the kiosk boots to a blank white screen; see
+# the comments in the file. Living in /etc it survives any reset of $TARGET.
+if [ -d /etc/chromium.d ]; then
+    sudo install -m 644 "$TARGET/deploy/kiosk/50-recipehud-keyring" /etc/chromium.d/50-recipehud-keyring
+else
+    echo "   /etc/chromium.d not present on this release; relying on start-kiosk.sh's flag"
+fi
 
 echo "-- labwc autostart (kiosk)"
 AUTOSTART="$HOME/.config/labwc/autostart"
@@ -103,6 +141,12 @@ else
 fi
 if ! grep -q "^kanshi" "$AUTOSTART" 2>/dev/null; then
     sed -i '1i kanshi &' "$AUTOSTART"
+fi
+# A per-user autostart replaces the system one, which is what normally starts
+# the on-screen keyboard — so it has to be started from here.
+if command -v squeekboard >/dev/null && ! grep -q "^squeekboard" "$AUTOSTART" 2>/dev/null; then
+    sed -i '/start-kiosk.sh/i squeekboard \&' "$AUTOSTART"
+    echo "   added squeekboard to $AUTOSTART"
 fi
 
 echo "-- disable OS screen blanking (the backend owns power management)"

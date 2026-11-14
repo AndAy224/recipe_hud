@@ -103,7 +103,7 @@ async def download_backup(request: Request):
 
 @router.post("/restore")
 async def restore(file: UploadFile):
-    fd, tmp_name = tempfile.mkstemp(suffix=".zip")
+    fd, tmp_name = tempfile.mkstemp(suffix=".zip", dir=backup.scratch_dir(CONFIG))
     os.close(fd)  # keep no handle open, or Windows can't move/unlink it
     tmp = Path(tmp_name)
     try:

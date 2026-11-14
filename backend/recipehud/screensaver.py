@@ -22,10 +22,10 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import HttpUrl, TypeAdapter
-
 from .db import Database
-from .extractor import ExtractionError, extract, local_image_url, snapshot_image
+from .extractor import (
+    ExtractionError, canonical_url as _canonical, extract, local_image_url, snapshot_image,
+)
 from .settings_store import SettingsStore
 
 log = logging.getLogger(__name__)
@@ -38,16 +38,6 @@ CATEGORY_TAGS = {"drink": "drinks", "main": "mains", "side": "sides", "dessert":
 WARM_DELAY_S = 90        # let boot settle before fetching anything
 WARM_EVERY_S = 24 * 3600
 WARM_GAP_S = 3           # between fetches: polite to the sites, light on the Pi
-
-_url = TypeAdapter(HttpUrl)
-
-
-def _canonical(url: str) -> str:
-    # The same normalization /api/recipe/save applies (HttpUrl), so a card
-    # saved from the screensaver and one saved from the clean view share one
-    # recipe_cache row.
-    return str(_url.validate_python(url))
-
 
 def _month_day(value: str) -> tuple[int, int]:
     month, day = value.split("-")

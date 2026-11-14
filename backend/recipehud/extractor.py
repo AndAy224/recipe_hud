@@ -12,6 +12,7 @@ import re
 from urllib.parse import urlparse
 
 import httpx
+from pydantic import HttpUrl, TypeAdapter
 
 from .config import CONFIG
 from .db import Database
@@ -54,6 +55,24 @@ RETRY_IMPERSONATED = {401, 403, 406, 429}
 
 class ExtractionError(Exception):
     pass
+
+
+_http_url = TypeAdapter(HttpUrl)
+
+# Keys in recipe_cache.meta_json that are not derived from the page and must
+# survive a re-extract: the user's own notes/rating/cook log, and the wine
+# pairing (regenerated only on request — it can cost an LLM call).
+PRESERVED_META = ("user", "wine_pairing")
+
+
+def canonical_url(url: str) -> str:
+    """The one spelling of a URL used as the recipe_cache key.
+
+    Request bodies are parsed as HttpUrl, which normalizes (lower-cases the
+    host, adds the root slash, percent-encodes, drops a default port). Query
+    parameters arrive raw, so every route must run them through this too, or
+    saving the recipe you are looking at lands on a different row."""
+    return str(_http_url.validate_python(url))
 
 
 def _is_private(address: str) -> bool:
@@ -117,8 +136,14 @@ async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = 
         # confirmed-good saved copy to a plain-text article.
         log.warning("refresh of %s degraded to %s; keeping the saved copy", url, data["kind"])
         return _row_to_dict(cached)
+    if cached and cached.get("meta_json"):
+        old_meta = json.loads(cached["meta_json"])
+        for key in PRESERVED_META:
+            if key in old_meta:
+                data["meta"].setdefault(key, old_meta[key])
     await _save(db, data)
     data["saved"] = bool(cached["saved"]) if cached else False
+    data["tags"] = [t for t in (cached.get("tags") or "").split(",") if t] if cached else []
     if data["saved"]:
         data["image_url"] = await snapshot_image(db, url) or data["image_url"]
     return data
@@ -305,17 +330,32 @@ NUTRIENT_KEYS = {
 }
 
 
+_THOUSANDS_RE = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?")
+_NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?|\.\d+")
+
+
+def _leading_number(text: str) -> float | None:
+    """"240 kcal" -> 240, "1,200 mg" -> 1200 (not 1), "0,5 g" -> 0.5."""
+    text = text.strip()
+    match = _THOUSANDS_RE.match(text)
+    if match:
+        return float(match.group().replace(",", ""))
+    match = _NUMBER_RE.match(text)
+    if not match:
+        return None
+    try:
+        return float(match.group().replace(",", "."))
+    except ValueError:
+        return None
+
+
 def _normalize_nutrition(raw: dict) -> dict | None:
     if not raw:
         return None
     out = {}
     for src, dest in NUTRIENT_KEYS.items():
-        match = re.match(r"[\d.]+", str(raw.get(src, "")).strip())
-        if not match:
-            continue
-        try:
-            value = float(match.group())
-        except ValueError:
+        value = _leading_number(str(raw.get(src, "")))
+        if value is None:
             continue
         out[dest] = int(value) if value == int(value) else round(value, 1)
     if not out:

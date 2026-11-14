@@ -53,8 +53,11 @@ rules; the kiosk also runs `--autoplay-policy=no-user-gesture-required`).
 
 **Idle machine**: `ACTIVE -(idle_timeout_s)→ CLOCK -(clock_to_off_s)→ OFF`.
 Clients render the clock/black scrim on `display.state` events — no navigation
-happens, the recipe stays underneath. Panel power is only cut in OFF, via
-`wlopm` (Bookworm labwc; `vcgencmd` does not work under KMS). Running/ringing
+happens, the recipe stays underneath. OFF is a black scrim plus a dimmed
+backlight (DDC/CI); real panel power is cut only in OFF and only when the
+opt-in `panel_power_off` setting is on, via `wlopm` (labwc; `vcgencmd` does
+not work under KMS) — off by default because this panel's touch controller
+loses power with it. Running/ringing
 timers and the keep-awake toggle inhibit transitions; a ringing alarm forces
 the display back on. Inside the night window ACTIVE goes straight to OFF after
 a shorter timeout. Wake comes from any client's activity ping or from the
@@ -177,4 +180,6 @@ go over REST. Client → server: throttled `{"type": "activity"}` pings.
 - `frontend/{launcher,recipe,admin,shared}/` — vanilla JS, no build step
 - `extension/` — unpacked MV3 extension
 - `deploy/` — install.sh, systemd unit, kiosk script, labwc/kanshi snippets
-- `scripts/` — dev server, DB seed, alarm generator, WS smoke test
+- `scripts/` — dev server, DB seed, alarm generator, and the standalone test
+  scripts (`test_extraction`, `test_scale`, `test_wake`, `ws_smoke`), plus
+  `screenshots.py` for the README images

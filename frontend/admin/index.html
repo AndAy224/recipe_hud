@@ -113,6 +113,11 @@
         <input name="alarm_volume" type="range" min="0" max="100">
       </label>
       <button type="button" id="test-alarm">Test alarm sound</button>
+      <label>Stop a ringing alarm by itself after (seconds)
+        <input name="alarm_auto_dismiss_s" type="number" min="10"></label>
+      <label class="check"><input name="wine_pairing_enabled" type="checkbox"> Suggest a wine pairing on recipes</label>
+      <label>Re-fetch an unsaved recipe after (days — saved recipes are kept as they are)
+        <input name="recipe_cache_max_age_days" type="number" min="1" class="narrow"></label>
       <label>Theme
         <select name="theme"><option value="dark">Dark</option><option value="light">Light</option></select>
       </label>

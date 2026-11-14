@@ -5,6 +5,10 @@ from ..settings_store import SettingsStore
 
 log = logging.getLogger(__name__)
 
+# The idle loop awaits these calls. With the compositor wedged, wlopm can sit
+# on the socket forever — and with it every later state change.
+CALL_TIMEOUT_S = 10
+
 
 class WlopmDisplay:
     """Wayland (labwc/wlroots) output power via wlopm.
@@ -67,7 +71,14 @@ class WlopmDisplay:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), CALL_TIMEOUT_S)
+        except asyncio.TimeoutError:
+            raise RuntimeError(f"wlopm {' '.join(args)} timed out") from None
+        finally:
+            if proc.returncode is None:  # timed out or cancelled: don't leave it behind
+                proc.kill()
+                await proc.wait()
         return proc.returncode, stdout.decode(errors="replace"), stderr.decode(errors="replace")
 
     async def _run(self, flag: str) -> bool:

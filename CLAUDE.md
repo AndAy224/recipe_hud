@@ -17,23 +17,24 @@ RECIPEHUD_DISPLAY_BACKEND=mock RECIPEHUD_DEBUG=1 \
   .venv/bin/uvicorn recipehud.main:app --reload --host 0.0.0.0 --port 8000 --app-dir backend
 # (scripts/dev.ps1 is the Windows equivalent; it also seeds the DB first)
 
-.venv/bin/python scripts/seed_db.py    # seed sites/presets/settings into a fresh DB
+.venv/bin/python scripts/seed_db.py    # seed sample sites + timer presets into a fresh DB
 ```
 
 Load the extension in dev via `chrome://extensions` → Developer mode → *Load unpacked* → `extension/`.
 
 ### Tests
 
-Tests are **standalone scripts, not pytest**, and each needs the backend running on `:8000`:
+Tests are **standalone scripts, not pytest**, and each needs a running backend (default `:8000`):
 
 ```bash
 .venv/bin/python scripts/test_extraction.py       # grades clean-view extraction across ~18 sites
 .venv/bin/python scripts/test_extraction.py --refresh   # bypass recipe_cache
 .venv/bin/python scripts/test_scale.py            # ingredient-scaling cases (drives the system Chromium)
-.venv/bin/python scripts/ws_smoke.py              # WebSocket/alarm smoke test
+.venv/bin/python scripts/ws_smoke.py              # WebSocket/alarm smoke test (really rings)
+.venv/bin/python scripts/test_wake.py             # idle/wake state machine (needs RECIPEHUD_DEBUG=1)
 ```
 
-There is **no per-case filter** — `--refresh` is `test_extraction.py`'s only flag. To exercise a single site, call the endpoint directly: `curl "localhost:8000/api/recipe/extract?url=<url>&refresh=1"`. Only `test_extraction.py` honours `RECIPEHUD_TEST_BASE` (point it at a scratch instance, e.g. `RECIPEHUD_TEST_BASE=http://127.0.0.1:8010`); `test_scale.py`, `ws_smoke.py` and `screenshots.py` hardcode `:8000`. There is no linter or formatter configured.
+There is **no per-case filter** — `--refresh` is `test_extraction.py`'s only flag. To exercise a single site, call the endpoint directly: `curl "localhost:8000/api/recipe/extract?url=<url>&refresh=1"`. Every script honours `RECIPEHUD_TEST_BASE` — **use it** (`RECIPEHUD_TEST_BASE=http://127.0.0.1:8010`): on the Pi the default `:8000` is the appliance, where `ws_smoke.py` sounds the kitchen alarm and `test_wake.py` rewrites idle settings (it also needs the debug routes, which the appliance doesn't mount). `test_extraction.py` exits non-zero when a site extracts badly (THIN/ERROR; a site refusing the fetch is only reported). `test_scale.py` drives the system Chromium through `scripts/_browser.py`; only `screenshots.py` needs Playwright (`pip install -e .[dev]`). There is no linter or formatter configured.
 
 Without hardware, drive the idle state machine with `POST /api/debug/idle/{active|clock|off}` and `POST /api/debug/touch` (only mounted when `RECIPEHUD_DEBUG=1`).
 

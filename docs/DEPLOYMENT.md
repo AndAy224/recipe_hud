@@ -1,9 +1,9 @@
-# Deployment (Raspberry Pi 4, Pi OS Bookworm)
+# Deployment (Raspberry Pi 4, Pi OS Bookworm or Trixie)
 
 ## Prerequisites
 
-- Raspberry Pi OS Bookworm **with desktop** (labwc Wayland session, the
-  default), autologin enabled (default on a fresh image).
+- Raspberry Pi OS Bookworm or Trixie **with desktop** (labwc Wayland session,
+  the default), autologin enabled (default on a fresh image).
 - VSDISPLAY 14.5" 2560×720 panel on HDMI, USB touch cable connected.
 - Network access for the install (recipe browsing needs it too; timers,
   launcher and cached clean views work offline).
@@ -16,16 +16,24 @@ cd ~/recipe_hud
 bash deploy/install.sh
 ```
 
-The script is idempotent (re-run after `git pull` to update). It:
+Run it as the desktop user, **not** with sudo (it asks for sudo itself where
+needed, and refuses to run as root). It is idempotent (re-run after
+`git pull` to update). It:
 
-1. apt-installs `chromium-browser wlopm wlr-randr kanshi python3-venv`
+1. apt-installs `chromium` (or `chromium-browser` on older releases), `wlopm
+   wlr-randr kanshi python3-venv python3-dev curl git rsync ddcutil
+   libinput-tools fonts-noto-color-emoji`, and `squeekboard` (on-screen
+   keyboard) where available
 2. rsyncs the repo to `/opt/recipehud`, creates the venv, installs the package
 3. adds your user to the `input` group (touch-wake needs it)
-4. seeds the database
-5. installs + enables the `recipehud-backend` systemd service
-6. adds the kiosk launch line to `~/.config/labwc/autostart`
-7. writes `~/.config/kanshi/config` with `transform 90` (portrait)
-8. disables the OS screen blanking (the backend owns power management)
+4. seeds the database on a first install (an existing database is left alone)
+5. installs, enables and (re)starts the `recipehud-backend` systemd service
+6. installs `/etc/chromium.d/50-recipehud-keyring` (keeps Chromium off the
+   locked system keyring — without it the kiosk boots to a white screen)
+7. adds `kanshi`, `squeekboard` and the kiosk launch line to
+   `~/.config/labwc/autostart`
+8. writes `~/.config/kanshi/config` with `transform 90` (portrait)
+9. disables the OS screen blanking (the backend owns power management)
 
 ### Manual step: touch rotation
 
@@ -45,14 +53,18 @@ The install script prints candidate device names (or run
 2. Admin panel from a phone: `http://<pi>.local:8000/admin` (no login).
 3. Timer alarm is audible (HDMI audio must route to the panel's speakers if
    present, else attach a speaker; check `raspi-config` → audio output).
-4. Leave it idle: clock screen appears, later the panel powers off; a tap
-   wakes it.
+4. Leave it idle: the clock screen appears, later the screen goes black (and
+   the backlight dims, where the panel supports DDC/CI); a tap wakes it. The
+   panel's *power* is deliberately left on — see the first troubleshooting row.
+   While a seasonal screensaver deck is in season, the clock screen is the
+   screensaver and stays up all day.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Display never powers off | `wlopm` must run as the session user: check `systemctl status recipehud-backend`, confirm `XDG_RUNTIME_DIR=/run/user/1000` and `WAYLAND_DISPLAY=wayland-0` match your session (`echo $WAYLAND_DISPLAY` in a desktop terminal). Try `wlopm --off HDMI-A-1` manually. Output name is a setting in the admin panel. |
+| Display never powers off | By design. The idle "off" state paints a black screen and dims the backlight; it does not cut panel power, because many HDMI touch panels (this one included) power their USB touch controller from the monitor, and a powered-off panel then can't be woken by touch. Real power-off is the opt-in `panel_power_off` setting (API only: `curl -X PATCH :8000/api/settings -d '{"panel_power_off": true}'`) — enable it only on hardware whose touch demonstrably survives. If it is on and still nothing happens: `wlopm` must run as the session user, so check `systemctl status recipehud-backend`, confirm `XDG_RUNTIME_DIR=/run/user/<your uid>` (`id -u`) and `WAYLAND_DISPLAY=wayland-0` match your session, and try `wlopm --off <output>` by hand. The output name is a setting in the admin panel. |
+| Overlay buttons do nothing on a recipe site | The overlay's requests go through the extension's service worker (a page can't reach `localhost` under Chromium's Local Network Access rules). After an update that touched `extension/`, restart the kiosk (admin → Restart kiosk) so Chromium reloads it. |
 | Power off works, wake doesn't | Usually the touch listener: confirm the user is in `input` (`groups`), re-login/reboot after install. Set an explicit device in admin → "Touch device override" (e.g. `/dev/input/event4`). |
 | Touch is 90° off | The `<touch mapToOutput>` line is missing/has the wrong device name. |
 | No alarm sound | Wrong audio output (`sudo raspi-config` → System → Audio). Test in admin → "Test alarm sound" from the kiosk itself. |

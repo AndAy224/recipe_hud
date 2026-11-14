@@ -1,4 +1,5 @@
-# Source of truth for the kiosk Chromium flags (used by start-kiosk.sh).
+# Why each kiosk Chromium flag is there. Reference notes only: the flags
+# themselves live in start-kiosk.sh, which is the source of truth.
 #
 # --kiosk http://localhost:8000/         full-screen, no chrome UI, launcher as home
 # --user-data-dir=~/.config/recipehud-chromium
@@ -13,7 +14,16 @@
 # --noerrdialogs --disable-infobars --disable-session-crashed-bubble
 # --hide-crash-restore-bubble
 #       no popups/bubbles ever visible in the kitchen
+# --password-store=basic
+#       use Chromium's own cookie store, not the system keyring. The keyring is
+#       locked on this autologin kiosk; waiting on it hangs every navigation
+#       and the panel boots to a blank white screen. Also applied from
+#       /etc/chromium.d/50-recipehud-keyring (installed by install.sh) so a
+#       reset of the checkout can't drop it. Keep both.
 # --disable-features=Translate           no translate prompts on foreign recipes
+#       Do NOT add LocalNetworkAccessChecks here to "fix" a blocked overlay
+#       request: that check is what keeps scripts on recipe pages away from the
+#       backend's open API. The overlay goes through its service worker instead.
 # --disable-component-update --check-for-update-interval=31536000
 #       no surprise component updates mid-cook
 # --overscroll-history-navigation=0      swipe must scroll, not go back

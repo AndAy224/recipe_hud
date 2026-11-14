@@ -136,11 +136,17 @@ async def main() -> None:
             assert st["power"] is True, "default OFF must not cut panel power"
             await http.post("/api/debug/idle/active")
 
-            await http.patch("/api/settings", json={"panel_power_off": True})
-            await http.post("/api/debug/idle/off")
-            st = (await http.get("/api/display")).json()
-            assert st["power"] is False, "panel_power_off=1 must cut panel power"
-            print("7. panel power opt-in ok (off by default, honoured when on)")
+            if st["backend"] != "mock":
+                # On a real panel this would cut its power — and on the kitchen
+                # panel that takes the touch controller with it, leaving
+                # nothing to wake the kiosk. Only ever exercise it on the mock.
+                print(f"7. panel power: default ok; opt-in half SKIPPED (backend={st['backend']}, not mock)")
+            else:
+                await http.patch("/api/settings", json={"panel_power_off": True})
+                await http.post("/api/debug/idle/off")
+                st = (await http.get("/api/display")).json()
+                assert st["power"] is False, "panel_power_off=1 must cut panel power"
+                print("7. panel power opt-in ok (off by default, honoured when on)")
         finally:
             await http.patch("/api/settings", json={"panel_power_off": prior})
 

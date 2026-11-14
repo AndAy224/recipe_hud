@@ -26,17 +26,35 @@ log = logging.getLogger(__name__)
 
 MAX_UPLOAD_BYTES = 250 * 1024 * 1024
 PENDING_NAME = "restore-pending.zip"
+SCRATCH_NAME = "tmp"
 
 
 def pending_path(cfg: Config) -> Path:
     return cfg.db_path.parent / PENDING_NAME
 
 
+def scratch_dir(cfg: Config) -> Path:
+    """Working space for backup/restore files, next to the database.
+
+    Not the system temp dir: on current Raspberry Pi OS /tmp is a RAM disk, so
+    a backup (DB copy + zip of every saved photo) or an uploaded restore would
+    sit in memory. Same filesystem as the DB also makes the final move a
+    rename."""
+    path = cfg.db_path.parent / SCRATCH_NAME
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def clear_scratch(cfg: Config) -> None:
+    """Startup: drop whatever a previous run left half-built."""
+    shutil.rmtree(cfg.db_path.parent / SCRATCH_NAME, ignore_errors=True)
+
+
 # ---------------------------------------------------------------- backup
 
 async def build_backup(db: Database, cfg: Config) -> tuple[Path, Path]:
     """Returns (zip_path, tmpdir). Caller must remove tmpdir when done."""
-    tmpdir = Path(tempfile.mkdtemp(prefix="recipehud-backup-"))
+    tmpdir = Path(tempfile.mkdtemp(prefix="backup-", dir=scratch_dir(cfg)))
     db_copy = tmpdir / "recipehud.db"
     await db.conn.execute("VACUUM INTO ?", (str(db_copy),))
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
@@ -78,7 +96,7 @@ def validate_upload(zip_path: Path) -> None:
                 raise ValueError("Unsafe path inside the zip")
         if "recipehud.db" not in names:
             raise ValueError("Zip does not contain recipehud.db — not a Recipe HUD backup")
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=zip_path.parent) as tmp:
             extracted = Path(zf.extract("recipehud.db", tmp))
             conn = sqlite3.connect(f"file:{extracted}?mode=ro", uri=True)
             try:
