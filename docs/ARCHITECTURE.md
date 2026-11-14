@@ -75,7 +75,10 @@ the highest `priority` wins — Thanksgiving (20) takes November out of
 Christmas (10). The `screensaver_theme` setting (admin → Holiday theme)
 overrides the calendar: `auto`, or a deck's theme name to show that deck
 whatever the date (`GET /api/screensaver/decks` lists the choices; changing it
-starts a warm pass so the newly chosen deck has its photos). While a deck is in season and `screensaver_enabled`, CLOCK is
+starts a warm pass so the newly chosen deck has its photos). The
+`screensaver_categories` setting (admin → Holiday screensaver shows) limits a
+seasonal deck to some kinds of card (`drink`, `main`, `side`, `dessert`); the
+others stay in the deck file, unshown. While a deck is in season and `screensaver_enabled`, CLOCK is
 the screensaver — a rotating photo card per recipe over the clock — and CLOCK
 stops timing out to OFF in the daytime; the night window still blacks it out,
 and when the window ends an OFF panel returns to the screensaver on its own.

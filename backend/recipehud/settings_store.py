@@ -37,6 +37,10 @@ DEFAULTS: dict = {
     # season; the highest priority wins an overlap), or a deck's theme name
     # ("christmas", "thanksgiving", …) to show that one whatever the date.
     "screensaver_theme": "auto",
+    # Which kinds of card a seasonal deck shows: any of drink, main, side,
+    # dessert (at least one). Cards of the other kinds stay in the deck files
+    # and are simply not shown.
+    "screensaver_categories": ["drink", "main", "side", "dessert"],
     # Out of season, show the user's own saved recipes on the CLOCK screen
     # instead of the plain clock. Cosmetic only: CLOCK still times out to OFF.
     "screensaver_saved_enabled": True,
@@ -139,6 +143,19 @@ def _deck_theme(value):
     return choice
 
 
+def _deck_categories(value):
+    from .screensaver import CATEGORIES  # lazy: screensaver.py imports this module
+
+    if isinstance(value, str):
+        value = [part for part in re.split(r"[,\s]+", value) if part]
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f"must be a list of: {', '.join(CATEGORIES)}")
+    wanted = {str(part).strip().lower() for part in value}
+    if not wanted or wanted - set(CATEGORIES):
+        raise ValueError(f"must be one or more of: {', '.join(CATEGORIES)}")
+    return [cat for cat in CATEGORIES if cat in wanted]
+
+
 VALIDATORS: dict = {
     "idle_timeout_s": _int(1, 86400),
     "clock_to_off_s": _int(1, 86400),
@@ -159,6 +176,7 @@ VALIDATORS: dict = {
     "wine_pairing_enabled": _bool,
     "screensaver_enabled": _bool,
     "screensaver_theme": _deck_theme,
+    "screensaver_categories": _deck_categories,
     "screensaver_saved_enabled": _bool,
     "backlight_control": _bool,
     "brightness_active": _int(0, 100),

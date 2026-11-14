@@ -209,9 +209,17 @@ def deck_choices(store: SettingsStore, today: datetime.date | None = None) -> di
             "name": deck["name"],
             "season": deck["season"],
             "in_season": in_season(deck, today),
-            "cards": len(deck["items"]),
+            "cards": len(shown_items(deck, store)),
         } for deck in load_decks() if deck["items"]],
     }
+
+
+def shown_items(deck: dict, store: SettingsStore) -> list[dict]:
+    """The deck's cards of the kinds `screensaver_categories` allows. If that
+    leaves a deck with nothing (it has no card of the chosen kinds), the whole
+    deck is shown rather than a blank screen that still holds the panel on."""
+    wanted = set(store.get("screensaver_categories"))
+    return [item for item in deck["items"] if item["category"] in wanted] or deck["items"]
 
 
 def deck_category(url: str) -> str | None:
@@ -236,8 +244,9 @@ def find_item(deck: dict, url: str) -> dict | None:
     return next((item for item in deck["items"] if item["url"] == url), None)
 
 
-async def deck_items(db: Database, deck: dict) -> list[dict]:
-    urls = [item["url"] for item in deck["items"]]
+async def deck_items(db: Database, deck: dict, store: SettingsStore) -> list[dict]:
+    shown = shown_items(deck, store)
+    urls = [item["url"] for item in shown]
     if not urls:
         return []
     rows = await db.fetchall(
@@ -245,7 +254,7 @@ async def deck_items(db: Database, deck: dict) -> list[dict]:
         f"WHERE url IN ({','.join('?' * len(urls))})", tuple(urls))
     by_url = {row["url"]: row for row in rows}
     items = []
-    for item in deck["items"]:
+    for item in shown:
         row = by_url.get(item["url"]) or {}
         items.append({
             "url": item["url"],
@@ -299,7 +308,7 @@ async def current_deck(db: Database, store: SettingsStore) -> dict:
     (the user's own recipes — purely cosmetic); inactive means the plain clock."""
     deck = active_deck(store)
     if deck:
-        items = await deck_items(db, deck)
+        items = await deck_items(db, deck, store)
         if items:
             return {"active": True, "kind": "seasonal", "theme": deck["theme"],
                     "addable": True, "ui": deck["ui"], "items": items}

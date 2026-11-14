@@ -17,6 +17,11 @@ section { margin-bottom: 1rem; }
 
 label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.95rem; color: var(--muted); }
 label.check { flex-direction: row; align-items: center; color: var(--fg); }
+fieldset.checks {
+  border: 0; padding: 0; margin: 0; min-width: 0;
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem;
+}
+fieldset.checks legend { padding: 0; margin-bottom: 0.4rem; font-size: 0.95rem; color: var(--muted); }
 
 input, select {
   font: inherit; color: var(--fg); background: var(--bg);

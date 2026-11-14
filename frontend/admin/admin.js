@@ -259,7 +259,14 @@ function fillSettings(settings) {
     if (input.type === "checkbox") input.checked = !!settings[key];
     else input.value = settings[key];
   }
+  const shown = settings.screensaver_categories || [];
+  for (const box of categoryBoxes()) box.checked = shown.includes(box.value);
   $("volume-value").textContent = `${settings.alarm_volume}%`;
+}
+
+// Which kinds of card the holiday screensaver shows (screensaver_categories).
+function categoryBoxes() {
+  return [...$("saver-categories").querySelectorAll("input[type=checkbox]")];
 }
 
 async function loadSettings() {
@@ -275,7 +282,11 @@ $("settings-form").onsubmit = async (ev) => {
     if (!input) continue;
     updates[key] = input.type === "checkbox" ? input.checked : input.value;
   }
+  // The backend refuses an empty list; with nothing ticked, leave it as it was.
+  const shown = categoryBoxes().filter((box) => box.checked).map((box) => box.value);
+  if (shown.length) updates.screensaver_categories = shown;
   fillSettings(await api("/api/settings", "PATCH", updates));
+  loadThemes();  // the picker's recipe counts follow the kinds shown
   $("settings-saved").hidden = false;
   setTimeout(() => { $("settings-saved").hidden = true; }, 2000);
 };
