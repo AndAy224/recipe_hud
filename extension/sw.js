@@ -25,12 +25,20 @@ function connect() {
   if (ws && ws.readyState === WebSocket.CONNECTING) return;
   if (ws && ws.readyState === WebSocket.OPEN) {
     if (Date.now() - lastRx < STALE_MS) return;
+    // Detach before closing: a zombie's onclose can fire long after its
+    // replacement is up, and must not be allowed to touch `ws` by then.
+    ws.onmessage = ws.onclose = ws.onerror = null;
     try { ws.close(); } catch { /* already gone */ }
     ws = null;
   }
   lastRx = Date.now();
-  ws = new WebSocket(BACKEND_WS);
-  ws.onmessage = (ev) => {
+  // Handlers are bound to this socket, never to the `ws` global. A late event
+  // from a superseded socket used to null out the live one and schedule yet
+  // another connect() — two sockets, every event relayed twice.
+  const sock = new WebSocket(BACKEND_WS);
+  ws = sock;
+  sock.onmessage = (ev) => {
+    if (ws !== sock) return;
     lastRx = Date.now();
     let msg;
     try { msg = JSON.parse(ev.data); } catch { return; }
@@ -39,8 +47,12 @@ function connect() {
       try { port.postMessage(msg); } catch { /* port gone */ }
     }
   };
-  ws.onclose = () => { ws = null; setTimeout(connect, 3000); };
-  ws.onerror = () => { try { ws.close(); } catch { /* already closed */ } };
+  sock.onclose = () => {
+    if (ws !== sock) return; // superseded; the live socket owns reconnects
+    ws = null;
+    setTimeout(connect, 3000);
+  };
+  sock.onerror = () => { try { sock.close(); } catch { /* already closed */ } };
 }
 
 function handleEvent(msg) {
@@ -142,6 +154,58 @@ async function refreshDisplay(port) {
     port.postMessage({ type: "night.state", data: { night: display.night } });
   } catch { /* port already gone */ }
 }
+
+// ------------------------------------------------------------ backend proxy
+// Content scripts must not fetch() the backend themselves. Their requests count
+// as the *page's*, and Chromium's Local Network Access rules stop a public
+// page (any recipe site) from reaching localhost without a per-site permission
+// prompt nobody at a kiosk will answer — so every timer button, the alarm's
+// Dismiss and the screensaver silently did nothing off the launcher. This
+// worker holds the host permission, so the overlay asks it instead. Page
+// scripts cannot reach this listener (no externally_connectable), which keeps
+// that browser protection in front of the backend's open API.
+const PROXY_PATH = /^\/(api|media)\//;
+
+async function proxyRequest({ method = "GET", path, body, as = "json" }) {
+  let url;
+  try { url = new URL(BACKEND_HTTP + path); } catch { url = null; }
+  if (!url || url.origin !== BACKEND_HTTP || !PROXY_PATH.test(url.pathname)) {
+    return { ok: false, status: 0, error: "path not allowed" };
+  }
+  const hasBody = body !== undefined && body !== null;
+  const res = await fetch(url, {
+    method,
+    headers: hasBody ? { "Content-Type": "application/json" } : {},
+    body: hasBody ? JSON.stringify(body) : undefined,
+  });
+  if (as === "blob") {
+    if (!res.ok) return { ok: false, status: res.status };
+    // Runtime messages are JSON, so binary crosses as base64.
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return {
+      ok: true,
+      status: res.status,
+      type: res.headers.get("content-type") || "",
+      data: btoa(binary),
+    };
+  }
+  let data = null;
+  try { data = await res.json(); } catch { /* empty or non-JSON body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.target !== "sw" || msg.cmd !== "api") return undefined;
+  proxyRequest(msg).then(
+    sendResponse,
+    (err) => sendResponse({ ok: false, status: 0, error: String(err) }),
+  );
+  return true; // answer asynchronously
+});
 
 chrome.alarms.create("ws-keepalive", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {

@@ -424,26 +424,39 @@ function getFallbackSaver() {
   return fallbackSaver;
 }
 
-function showAlarm(data) {
-  if (hasExtension()) return;
-  getFallbackSaver()?.hideToast();
-  $("alarm-label").textContent = `${data.label} — done!`;
-  $("alarm-flash").classList.add("visible");
-  $("alarm-flash").dataset.timerId = data.id;
+// Every ringing timer, oldest first. The alarm screen and its sound follow
+// this map, so they stay on for as long as *anything* rings: tracking a single
+// id meant dismissing one of two alarms silenced and hid the other as well.
+const ringing = new Map(); // timer id -> label
+
+function syncRinging(list) {
+  const live = new Set(list.filter((t) => t.state === "ringing").map((t) => t.id));
+  for (const id of [...ringing.keys()]) if (!live.has(id)) ringing.delete(id);
+  for (const t of list) if (t.state === "ringing" && !ringing.has(t.id)) ringing.set(t.id, t.label);
+}
+
+function renderAlarm() {
+  if (hasExtension()) return; // the overlay owns alarms when it is present
+  const flash = $("alarm-flash");
+  const first = ringing.entries().next().value;
+  if (!first) {
+    flash.classList.remove("visible");
+    if (alarmAudio) alarmAudio.pause();
+    return;
+  }
+  if (!flash.classList.contains("visible")) getFallbackSaver()?.hideToast();
+  const more = ringing.size - 1;
+  $("alarm-label").textContent = `${first[1]} — done!${more > 0 ? ` (+${more} more)` : ""}`;
+  flash.classList.add("visible");
   if (!alarmAudio) { alarmAudio = new Audio("/shared/alarm.wav"); alarmAudio.loop = true; }
-  alarmAudio.volume = (data.volume ?? 80) / 100;
-  alarmAudio.play().catch(() => {});
+  alarmAudio.volume = (settings.alarm_volume ?? 80) / 100;
+  if (alarmAudio.paused) alarmAudio.play().catch(() => {});
 }
 
-function hideAlarm() {
-  $("alarm-flash").classList.remove("visible");
-  if (alarmAudio) alarmAudio.pause();
-}
-
+// Not hidden optimistically: the backend's alarm.stop takes the screen down.
 $("alarm-dismiss").onclick = () => {
-  const id = $("alarm-flash").dataset.timerId;
+  const id = ringing.keys().next().value;
   if (id) timerAction(id, "dismiss");
-  hideAlarm();
 };
 
 function setDisplayState(state) {
@@ -474,12 +487,13 @@ const ws = new WSClient("launcher", (type, data) => {
     nightNow = !!data.display.night;
     renderTimers(); renderKeepAwake(); applyTheme(); applyNight();
     setDisplayState(data.display.state);
-    if (!hasExtension()) {
-      const ringing = timers.find((t) => t.state === "ringing");
-      if (ringing) showAlarm({ id: ringing.id, label: ringing.label, volume: settings.alarm_volume });
-    }
+    ringing.clear();
+    syncRinging(timers);
+    renderAlarm();
   } else if (type === "timer.tick") {
     timers = data; renderTimers();
+    syncRinging(timers);
+    renderAlarm();
   } else if (type === "timer.created" || type === "timer.updated") {
     const idx = timers.findIndex((t) => t.id === data.id);
     if (idx >= 0) timers[idx] = data; else timers.push(data);
@@ -487,10 +501,14 @@ const ws = new WSClient("launcher", (type, data) => {
   } else if (type === "timer.cancelled") {
     timers = timers.filter((t) => t.id !== data.id);
     renderTimers();
+    ringing.delete(data.id);
+    renderAlarm();
   } else if (type === "alarm.start") {
-    showAlarm(data);
+    ringing.set(data.id, data.label);
+    renderAlarm();
   } else if (type === "alarm.stop") {
-    hideAlarm();
+    ringing.delete(data.id);
+    renderAlarm();
   } else if (type === "display.state") {
     setDisplayState(data.state);
   } else if (type === "navigate") {

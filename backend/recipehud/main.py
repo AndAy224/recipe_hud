@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Mount
@@ -96,14 +95,11 @@ async def _backfill_image_snapshots(db: Database) -> None:
 
 app = FastAPI(title="Recipe HUD", lifespan=lifespan)
 
-# The extension's content script fetches from recipe-site origins, so timers
-# must work cross-origin. The API (admin included) is LAN-open by design.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# No CORS headers, on purpose. The API (admin included) is LAN-open by design,
+# but nothing legitimate calls it cross-origin: the served pages are same-
+# origin, and the overlay reaches it through the extension's service worker,
+# whose host permission needs no CORS. A wildcard here would let any web page
+# in any browser on the LAN read every response and drive /api/system/*.
 
 
 @app.middleware("http")

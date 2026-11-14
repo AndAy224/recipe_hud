@@ -5,6 +5,7 @@ Results are cached in recipe_cache so clean views also work offline."""
 import asyncio
 import datetime
 import hashlib
+import ipaddress
 import json
 import logging
 import re
@@ -55,6 +56,43 @@ class ExtractionError(Exception):
     pass
 
 
+def _is_private(address: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(address.split("%", 1)[0])  # drop any zone id
+    except ValueError:
+        return True  # not an address we can vouch for
+    ip = getattr(ip, "ipv4_mapped", None) or ip
+    return (ip.is_private or ip.is_loopback or ip.is_link_local
+            or ip.is_multicast or ip.is_reserved or ip.is_unspecified)
+
+
+async def _require_public(url: str) -> None:
+    """Refuse URLs that resolve into this machine or the LAN.
+
+    /api/recipe/extract is unauthenticated and returns the fetched page's text,
+    so without this it doubles as a way to read any device on the home network
+    (router admin pages, the backend's own API). Best-effort: it checks the
+    name at request time, which is the right bar for a home appliance."""
+    if CONFIG.allow_private_fetch:
+        return
+    host = urlparse(url).hostname
+    if not host:
+        raise ExtractionError("That URL has no host name")
+    try:
+        infos = await asyncio.get_running_loop().getaddrinfo(host, None)
+    except OSError as exc:
+        raise ExtractionError(f"Could not resolve {host}") from exc
+    if not infos or any(_is_private(info[4][0]) for info in infos):
+        raise ExtractionError(
+            f"{host} is on the local network; only public sites can be fetched "
+            "(set RECIPEHUD_ALLOW_PRIVATE_FETCH=1 to allow it)")
+
+
+async def _check_redirect(request: httpx.Request) -> None:
+    # httpx calls this for every hop, so a public URL can't bounce us inward.
+    await _require_public(str(request.url))
+
+
 async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = False) -> dict:
     cached = await db.fetchone("SELECT * FROM recipe_cache WHERE url = ?", (url,))
     # Saved recipes never expire (the source page may vanish; the cache IS the copy).
@@ -87,9 +125,11 @@ async def extract(db: Database, store: SettingsStore, url: str, refresh: bool = 
 
 
 async def _fetch(url: str) -> str:
+    await _require_public(url)
     try:
         async with httpx.AsyncClient(
             headers=BROWSER_HEADERS, follow_redirects=True, timeout=20,
+            event_hooks={"request": [_check_redirect]},
         ) as client:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -359,11 +399,13 @@ async def snapshot_image(db: Database, url: str) -> str | None:
     if row["image_local"]:
         return local_image_url(row)
     try:
+        await _require_public(row["image_url"])
         try:
             async with httpx.AsyncClient(
                 headers={"User-Agent": USER_AGENT, "Referer": url},
                 follow_redirects=True,
                 timeout=20,
+                event_hooks={"request": [_check_redirect]},
             ) as client:
                 resp = await client.get(row["image_url"])
                 resp.raise_for_status()

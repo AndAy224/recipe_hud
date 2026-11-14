@@ -29,6 +29,11 @@ class Config(BaseSettings):
     debug: bool = False
     # Where the kiosk's Home button / launcher lives, as seen from the Pi itself.
     launcher_url: str = "http://localhost:8000/"
+    # Extraction fetches whatever URL it is handed, server-side. By default it
+    # refuses loopback/private/link-local targets so the open /extract endpoint
+    # can't be used to read other devices on the LAN. Set this if your recipes
+    # live on a LAN server (Mealie, Tandoor, …). Env: RECIPEHUD_ALLOW_PRIVATE_FETCH.
+    allow_private_fetch: bool = False
     # Optional: enables LLM-generated wine pairings. Without it, pairings fall
     # back to a local rule-based guess. Env: RECIPEHUD_ANTHROPIC_API_KEY.
     anthropic_api_key: str = ""

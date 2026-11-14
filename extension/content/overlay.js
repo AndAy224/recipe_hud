@@ -94,6 +94,8 @@ button:active { filter: brightness(1.3); }
 }
 .alarm[hidden] { display: none; }
 .alarm .a-label { font-size: 44px; font-weight: 700; color: #fff; text-align: center; padding: 0 20px; }
+.alarm .a-more { font-size: 24px; color: rgba(255,255,255,0.85); margin-top: -12px; }
+.alarm .a-more:empty { display: none; }
 .alarm button { min-height: 72px; font-size: 22px; padding: 0 30px; }
 .alarm .a-dismiss { background: #fff; color: #14161a; }
 .alarm .a-extend { background: rgba(255,255,255,0.25); color: #fff; }
@@ -135,6 +137,7 @@ button:active { filter: brightness(1.3); }
     </div>
     <div class="alarm" hidden>
       <div class="a-label"></div>
+      <div class="a-more"></div>
       <button class="a-dismiss">Dismiss</button>
       <button class="a-extend">+1 minute</button>
     </div>
@@ -144,12 +147,6 @@ button:active { filter: brightness(1.3); }
 
   const $ = (sel) => root.querySelector(sel);
 
-  // Seasonal screensaver: lives inside the scrim (so the scrim's wake tap and
-  // hide/show cover it) and replaces the plain clock while a deck is in season.
-  const saver = Saver
-    ? Saver.create({ backend: BACKEND, scrim: $(".scrim"), root, isBlocked: () => !$(".alarm").hidden })
-    : null;
-
   const fmt = (total) => {
     const s = Math.max(0, Math.round(total));
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -157,15 +154,50 @@ button:active { filter: brightness(1.3); }
     return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
   };
 
-  const api = (path, body) =>
-    fetch(BACKEND + path, {
-      method: "POST",
-      headers: body ? { "Content-Type": "application/json" } : {},
-      body: body ? JSON.stringify(body) : undefined,
-    }).catch(() => {});
+  // Every backend call goes through the service worker (see sw.js): a content
+  // script's own fetch() is the *page's* request, which Chromium's Local
+  // Network Access rules block from a recipe site to localhost. Always
+  // resolves to {ok, status, data}; ok is false when the worker is unreachable
+  // (extension reloaded) or the backend is down.
+  async function backend(path, { method = "GET", body, as = "json" } = {}) {
+    let res = null;
+    try {
+      res = await chrome.runtime.sendMessage({ target: "sw", cmd: "api", method, path, body, as });
+    } catch { /* extension context gone */ }
+    return res || { ok: false, status: 0 };
+  }
+  const api = (path, body) => backend(path, { method: "POST", body });
+  // Throwing variants, shaped for the screensaver (which injects them).
+  async function fetchJson(path, opts) {
+    const res = await backend(path, opts);
+    if (!res.ok) throw new Error(`backend ${res.status}`);
+    return res.data;
+  }
+  async function fetchBlob(path) {
+    const res = await backend(path, { as: "blob" });
+    if (!res.ok) throw new Error(`backend ${res.status}`);
+    const binary = atob(res.data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: res.type });
+  }
+
+  // Seasonal screensaver: lives inside the scrim (so the scrim's wake tap and
+  // hide/show cover it) and replaces the plain clock while a deck is in season.
+  const saver = Saver
+    ? Saver.create({
+        backend: BACKEND, scrim: $(".scrim"), root,
+        isBlocked: () => !$(".alarm").hidden,
+        fetchJson, fetchBlob,
+      })
+    : null;
 
   let timers = [];
-  let alarmTimerId = null;
+  // Every ringing timer, oldest first (a Map keeps insertion order). The alarm
+  // screen is drawn from this, so it stays up for as long as *anything* rings:
+  // with a single remembered id, dismissing one of two alarms hid the screen
+  // while the other kept sounding with no button left to stop it.
+  const ringing = new Map(); // timer id -> label
 
   // ------------------------------------------------------------ toolbar
 
@@ -223,7 +255,7 @@ button:active { filter: brightness(1.3); }
   async function loadPresets() {
     let presets = [];
     try {
-      presets = await (await fetch(BACKEND + "/api/presets")).json();
+      presets = (await fetchJson("/api/presets")) || [];
     } catch { /* backend unreachable */ }
     $(".presets").replaceChildren(...presets.map((p) => {
       const btn = document.createElement("button");
@@ -273,28 +305,43 @@ button:active { filter: brightness(1.3); }
   }
   renderChips();
 
-  $(".start-btn").onclick = () => {
+  $(".start-btn").onclick = async () => {
     const seconds = keypadSeconds();
     if (seconds <= 0) return;
-    api("/api/timers", { label: selectedLabel, seconds });
+    const res = await api("/api/timers", { label: selectedLabel, seconds });
+    if (!res.ok) return; // keep what was typed so it can be retried
     digits = "";
     renderKeypadDisplay();
   };
 
   // ----------------------------------------------------- alarm + scrims
 
-  function showAlarm(data) {
-    if (saver) saver.hideToast();
-    alarmTimerId = data.id;
-    $(".a-label").textContent = `${data.label} — done!`;
+  function renderAlarm() {
+    const first = ringing.entries().next().value;
+    if (!first) { $(".alarm").hidden = true; return; }
+    if ($(".alarm").hidden && saver) saver.hideToast();
+    const more = ringing.size - 1;
+    $(".a-label").textContent = `${first[1]} — done!`;
+    $(".a-more").textContent =
+      more > 0 ? `+${more} more timer${more > 1 ? "s" : ""} ringing` : "";
     $(".alarm").hidden = false;
   }
-  function hideAlarm() {
-    alarmTimerId = null;
-    $(".alarm").hidden = true;
+  // Not hidden optimistically: the screen goes when the backend confirms with
+  // alarm.stop. If the request never lands, the alarm really is still ringing.
+  function alarmAction(action, body) {
+    const id = ringing.keys().next().value;
+    if (id) api(`/api/timers/${id}/${action}`, body);
   }
-  $(".a-dismiss").onclick = () => { if (alarmTimerId) api(`/api/timers/${alarmTimerId}/dismiss`); hideAlarm(); };
-  $(".a-extend").onclick = () => { if (alarmTimerId) api(`/api/timers/${alarmTimerId}/extend`, { seconds: 60 }); hideAlarm(); };
+  $(".a-dismiss").onclick = () => alarmAction("dismiss");
+  $(".a-extend").onclick = () => alarmAction("extend", { seconds: 60 });
+
+  // Timer lists (snapshot, tick) carry every timer's state, so they are the
+  // ground truth: this also heals a missed alarm.start / alarm.stop.
+  function syncRinging(list) {
+    const live = new Set(list.filter((t) => t.state === "ringing").map((t) => t.id));
+    for (const id of [...ringing.keys()]) if (!live.has(id)) ringing.delete(id);
+    for (const t of list) if (t.state === "ringing" && !ringing.has(t.id)) ringing.set(t.id, t.label);
+  }
 
   let scrimClockInterval = null;
   let scrimWeatherInterval = null;
@@ -302,7 +349,7 @@ button:active { filter: brightness(1.3); }
   async function loadScrimWeather() {
     let w = null;
     try {
-      w = await (await fetch(BACKEND + "/api/weather")).json();
+      w = await fetchJson("/api/weather");
     } catch { /* backend unreachable */ }
     const ok = w && w.configured && !w.error;
     $(".sc-weather").textContent = ok
@@ -366,19 +413,21 @@ button:active { filter: brightness(1.3); }
       nightNow = !!data.display.night;
       nightDimEnabled = !!data.settings.night_dim_enabled;
       applyNight();
-      const ring = timers.find((t) => t.state === "ringing");
-      if (ring) showAlarm(ring); else hideAlarm();
+      ringing.clear();
+      syncRinging(timers);
     } else if (type === "timer.tick") {
       timers = data;
+      syncRinging(timers);
     } else if (type === "timer.created" || type === "timer.updated") {
       const idx = timers.findIndex((t) => t.id === data.id);
       if (idx >= 0) timers[idx] = data; else timers.push(data);
     } else if (type === "timer.cancelled") {
       timers = timers.filter((t) => t.id !== data.id);
+      ringing.delete(data.id);
     } else if (type === "alarm.start") {
-      showAlarm(data);
+      ringing.set(data.id, data.label);
     } else if (type === "alarm.stop") {
-      hideAlarm();
+      ringing.delete(data.id);
     } else if (type === "display.state") {
       setDisplayState(data.state);
     } else if (type === "night.state") {
@@ -394,6 +443,7 @@ button:active { filter: brightness(1.3); }
       location.href = data.url;
     }
     renderBadge();
+    renderAlarm();
     if (!$(".panel").hidden) renderTimerList();
   }
 

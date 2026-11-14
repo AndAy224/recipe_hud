@@ -34,9 +34,17 @@ timers. `running → ringing` at zero; ringing auto-dismisses after
 
 **The overlay is a Chromium extension**, because recipe sites block iframes.
 The content script builds its UI in a *closed shadow root* with constructed
-stylesheets, so neither site CSS nor site CSP can touch it. Command traffic is
-plain `fetch` to `http://localhost:8000` (the backend sends permissive CORS
-headers for this). The extension service worker owns a single WebSocket and
+stylesheets, so neither site CSS nor site CSP can touch it. Command traffic
+goes **through the extension service worker**, never straight from the content
+script: a content script's `fetch` counts as the page's request, and Chromium's
+Local Network Access rules block a public page (any recipe site) from reaching
+`localhost` without a per-site permission prompt. The content script sends
+`{target:"sw", cmd:"api", …}` runtime messages; the worker, which holds the
+`localhost:8000` host permission, performs the request and returns the result
+(images cross as base64 and are rebuilt into blobs). Page scripts cannot reach
+that listener, so the browser keeps third-party scripts on recipe sites away
+from the backend — which is also why the backend sends **no CORS headers**.
+The service worker also owns a single WebSocket and
 relays events to content scripts through runtime ports; the 1 Hz tick traffic
 keeps the MV3 worker alive precisely when alarms can fire, and a
 `chrome.alarms` heartbeat reconnects it after idle sleeps. Alarm audio plays
@@ -103,7 +111,7 @@ land on the readable-article view by design.
 and every `/api/*` route — including the mutating admin ones and
 `/api/system/*` — answer any request that reaches the backend. The appliance
 is a kitchen panel on a trusted home network, and the friction of a login on
-a touchscreen (and in the extension's cross-origin fetches) bought nothing
+a touchscreen (and in the extension's requests) bought nothing
 the network boundary wasn't already providing. This is also why `POST
 /api/send` is open: driving the kiosk to a URL from a phone should be
 zero-friction (`HttpUrl` validation still blocks `javascript:`/`file:`
@@ -154,6 +162,7 @@ go over REST. Client → server: throttled `{"type": "activity"}` pings.
 | `settings.updated` | changed keys |
 | `night.state` | `{night: bool}` — night window flipped |
 | `recipes.updated` | `{}` — a recipe was saved/unsaved |
+| `heartbeat` | `{}` every 20 s — lets clients tell a live socket from a half-open one (they reconnect after ~70 s of silence) |
 
 ## Repo map
 

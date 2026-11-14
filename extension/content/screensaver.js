@@ -214,7 +214,27 @@
 
   // ------------------------------------------------------------------ create
 
-  function create({ backend = "", scrim, root, isBlocked = () => false }) {
+  // `fetchJson(path, {method, body})` and `fetchBlob(path)` are how this talks
+  // to the backend; both throw on failure. The launcher fallback is same-origin
+  // and uses the plain-fetch defaults below. The extension overlay MUST inject
+  // its own (routed through the service worker): a content script's fetch() is
+  // the page's request, and Chromium blocks a recipe site from reaching
+  // localhost (Local Network Access).
+  function create({ backend = "", scrim, root, isBlocked = () => false, fetchJson, fetchBlob }) {
+    const getJson = fetchJson || (async (path, { method = "GET", body } = {}) => {
+      const res = await fetch(backend + path, {
+        method,
+        headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error(`backend ${res.status}`);
+      return res.json();
+    });
+    const getBlob = fetchBlob || (async (path) => {
+      const res = await fetch(backend + path);
+      if (!res.ok) throw new Error(`backend ${res.status}`);
+      return res.blob();
+    });
     const view = el("div", "rhss");
     view.hidden = true;
     view.innerHTML = `
@@ -272,8 +292,7 @@
       running = true;
       const my = ++gen;
       try {
-        const res = await fetch(backend + "/api/screensaver");
-        deck = await res.json();
+        deck = await getJson("/api/screensaver");
       } catch {
         deck = null;
       }
@@ -388,18 +407,16 @@
       }
     }
 
-    // Images arrive as blobs via fetch() — the same path the overlay already
-    // uses for /api/weather — rather than <img src="http://localhost:8000/…">,
-    // which a recipe site's CSP or Chrome's local-network rules could block.
+    // Images arrive as blobs through the host's fetchBlob rather than
+    // <img src="http://localhost:8000/…">, which a recipe site's CSP or
+    // Chromium's local-network rules would block.
     async function imageUrl(path) {
       if (blobs.has(path)) {
         const url = blobs.get(path);
         blobs.delete(path); blobs.set(path, url); // LRU touch
         return url;
       }
-      const res = await fetch(backend + path);
-      if (!res.ok) throw new Error(`image ${res.status}`);
-      const url = URL.createObjectURL(await res.blob());
+      const url = URL.createObjectURL(await getBlob(path));
       blobs.set(path, url);
       while (blobs.size > MAX_BLOBS) {
         const [oldPath, oldUrl] = blobs.entries().next().value;
@@ -420,7 +437,7 @@
 
     async function loadWeather() {
       let w = null;
-      try { w = await (await fetch(backend + "/api/weather")).json(); } catch { /* offline */ }
+      try { w = await getJson("/api/weather"); } catch { /* offline */ }
       const ok = w && w.configured && !w.error;
       q(".rhss-weather").textContent = ok
         ? `${w.emoji} ${Math.round(w.temp)}${w.unit || "°"} · H ${Math.round(w.high)}° / L ${Math.round(w.low)}°`
@@ -464,12 +481,7 @@
         add.textContent = "Adding…";
         clearTimeout(toastTimer);
         try {
-          const res = await fetch(backend + "/api/screensaver/add", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: item.url }),
-          });
-          if (!res.ok) throw new Error(String(res.status));
+          await getJson("/api/screensaver/add", { method: "POST", body: { url: item.url } });
           item.saved = true;
           markSaved("✓ Added to My Recipes");
         } catch {
