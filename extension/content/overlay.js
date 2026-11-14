@@ -10,6 +10,10 @@
   const CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+/* Guard (as in frontend/shared/theme.css): a class's display rule must never
+   beat the hidden attribute. Without it .toolbar's display:flex kept the
+   toolbar on the launcher, which is the one page that hides it. */
+[hidden] { display: none !important; }
 button { font: inherit; cursor: pointer; border: none; border-radius: 14px; }
 button:active { filter: brightness(1.3); }
 
