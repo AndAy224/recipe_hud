@@ -198,6 +198,8 @@ const SETTINGS_FIELDS = [
   "idle_timeout_s", "clock_to_off_s", "night_mode_enabled", "night_dim_enabled",
   "night_off_start", "night_off_end", "night_idle_timeout_s", "alarm_volume",
   "theme", "weather_location", "display_output", "touch_device",
+  "screensaver_enabled", "backlight_control", "brightness_active", "brightness_night_pct",
+  "brightness_off",
 ];
 
 function fillSettings(settings) {
@@ -269,9 +271,14 @@ let timers = [];
 function renderLive(display) {
   if (display) {
     const inhibitors = display.inhibitors.length ? ` · kept awake by: ${display.inhibitors.join(", ")}` : "";
+    const bl = display.backlight;
+    const backlight = !bl ? ""
+      : bl.available ? ` · backlight: ${bl.level ?? "?"}%${bl.error ? ` (${bl.error})` : ""}`
+      : ` · backlight: n/a (${bl.error || "unavailable"})`;
     $("live-display").textContent =
       `Display: ${display.power ? "on" : "off"} · state: ${display.state}` +
-      ` · backend: ${display.backend}${display.night ? " · night window" : ""}${inhibitors}`;
+      `${display.screensaver ? " (holiday screensaver)" : ""}` +
+      ` · backend: ${display.backend}${display.night ? " · night window" : ""}${backlight}${inhibitors}`;
   }
   $("live-timers").replaceChildren(...timers.map((t) => {
     const div = document.createElement("div");

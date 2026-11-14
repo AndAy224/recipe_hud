@@ -16,11 +16,17 @@ Covers:
      fresh idle timeout instead of blanking on a stale one;
   6. OFF only cuts real panel power when `panel_power_off` is on — the default
      is scrim-only, because this panel powers its own USB touch controller.
+  8. while a holiday screensaver deck is in season, CLOCK (the screensaver)
+     does not time out to OFF in the daytime — and does once it's switched off;
+  9. the end of the night window brings a black (OFF) panel back to the
+     screensaver instead of leaving it dark until someone taps.
+  (8/9 are skipped out of season.)
 
 NOTE: it writes settings, so point it at a scratch DB, not the appliance.
 """
 
 import asyncio
+import datetime
 import json
 import os
 
@@ -137,6 +143,43 @@ async def main() -> None:
             print("7. panel power opt-in ok (off by default, honoured when on)")
         finally:
             await http.patch("/api/settings", json={"panel_power_off": prior})
+
+        # 8. In season, the screensaver replaces the daytime black screen.
+        original = (await http.get("/api/settings")).json()
+        try:
+            await http.patch("/api/settings", json={
+                "screensaver_enabled": True, "night_mode_enabled": False, "clock_to_off_s": 2})
+            if not (await http.get("/api/display")).json()["screensaver"]:
+                print("8. screensaver hold: SKIPPED (no deck in season)")
+            else:
+                await drain(ws, 1)                    # flush case 7's events
+                await http.post("/api/debug/idle/clock")
+                seen = states(await drain(ws, 4.5))   # well past clock_to_off_s
+                assert "off" not in seen, f"screensaver timed out to off: {seen}"
+                assert (await http.get("/api/display")).json()["state"] == "clock"
+                await http.patch("/api/settings", json={"screensaver_enabled": False})
+                assert "off" in states(await drain(ws, 3)), \
+                    "with the screensaver off, clock must time out to off again"
+                print("8. screensaver holds the clock state in the daytime ok")
+
+                # 9. Night ends while OFF -> back to the screensaver.
+                now = datetime.datetime.now()
+                hhmm = lambda dt: dt.strftime("%H:%M")
+                await http.patch("/api/settings", json={
+                    "screensaver_enabled": True, "night_mode_enabled": True,
+                    "night_off_start": hhmm(now - datetime.timedelta(minutes=2)),
+                    "night_off_end": hhmm(now + datetime.timedelta(minutes=2))})
+                await http.post("/api/debug/idle/off")
+                await drain(ws, 2)                    # loop registers night = True
+                assert (await http.get("/api/display")).json()["night"] is True
+                await http.patch("/api/settings", json={"night_off_end": hhmm(now)})
+                seen = states(await drain(ws, 3))
+                assert "clock" in seen, f"night end left the panel black: {seen}"
+                print("9. night end returns OFF to the screensaver ok")
+        finally:
+            await http.patch("/api/settings", json={k: original[k] for k in (
+                "screensaver_enabled", "night_mode_enabled", "clock_to_off_s",
+                "night_off_start", "night_off_end")})
 
         await http.post("/api/debug/idle/active")
     print("PASS")

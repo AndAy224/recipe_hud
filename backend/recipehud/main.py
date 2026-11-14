@@ -8,13 +8,14 @@ from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Mount
 
-from . import backup, input_watch, log_buffer
+from . import backup, input_watch, log_buffer, screensaver
 from .api import (
-    debug, display, recipe, send, settings as settings_api, sites, system, timers, weather,
+    debug, display, recipe, screensaver as screensaver_api, send, settings as settings_api,
+    sites, system, timers, weather,
 )
 from .config import CONFIG
 from .db import Database
-from .display_ctl import select_backend
+from .display_ctl import select_backend, select_backlight
 from .extractor import snapshot_image
 from .idle import IdleController
 from .settings_store import SettingsStore
@@ -36,8 +37,9 @@ async def lifespan(app: FastAPI):
     await store.load()
     hub = Hub()
     display_backend = select_backend(CONFIG, store)
+    backlight = select_backlight(CONFIG, store)
     engine = TimerEngine(db, hub.broadcast, store)
-    idle = IdleController(display_backend, hub.broadcast, store, engine)
+    idle = IdleController(display_backend, hub.broadcast, store, engine, backlight)
 
     app.state.cfg = CONFIG
     app.state.db = db
@@ -45,18 +47,24 @@ async def lifespan(app: FastAPI):
     app.state.hub = hub
     app.state.engine = engine
     app.state.idle = idle
+    app.state.backlight = backlight
 
     await engine.restore()
     tasks = [asyncio.create_task(idle.run()),
+             asyncio.create_task(backlight.run()),
              asyncio.create_task(_heartbeat(hub)),
-             asyncio.create_task(_backfill_image_snapshots(db))]
+             asyncio.create_task(_backfill_image_snapshots(db)),
+             asyncio.create_task(screensaver.warm_loop(db, store))]
     watcher = input_watch.start(idle, store)
     if watcher:
         tasks.append(watcher)
-    log.info("recipehud up: display backend=%s debug=%s", display_backend.name, CONFIG.debug)
+    log.info("recipehud up: display backend=%s backlight=%s debug=%s",
+             display_backend.name, backlight.name, CONFIG.debug)
     yield
     for task in tasks:
         task.cancel()
+    # A stopped backend must not leave the panel dimmed (bounded, best-effort).
+    await backlight.restore(store.get("brightness_active"))
     await engine.shutdown()
     await db.close()
 
@@ -119,6 +127,7 @@ app.include_router(system.router)
 app.include_router(recipe.router)
 app.include_router(weather.router)
 app.include_router(send.router)
+app.include_router(screensaver_api.router)
 if CONFIG.debug:
     app.include_router(debug.router)
 
@@ -165,6 +174,16 @@ FRONTEND = CONFIG.frontend_dir
 @app.get("/recipe")
 async def recipe_page():
     return FileResponse(FRONTEND / "recipe" / "index.html")
+
+
+# The screensaver UI has exactly one source: the extension's content script.
+# The launcher's no-extension fallback loads the very same file from here, so
+# the two can never drift. (A change to it therefore needs a backend update for
+# the launcher AND a kiosk restart for the extension.)
+@app.get("/ext/screensaver.js")
+async def screensaver_js():
+    return FileResponse(CONFIG.extension_dir / "content" / "screensaver.js",
+                        media_type="text/javascript")
 
 
 CONFIG.media_dir.mkdir(parents=True, exist_ok=True)

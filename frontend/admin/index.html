@@ -93,14 +93,21 @@
     <form id="settings-form" class="card">
       <label>Idle timeout before clock screen (seconds)
         <input name="idle_timeout_s" type="number" min="10"></label>
-      <label>Clock screen before display off (seconds)
+      <label>Clock screen before display off (seconds — not used while the holiday screensaver is showing)
         <input name="clock_to_off_s" type="number" min="10"></label>
+      <label class="check"><input name="screensaver_enabled" type="checkbox"> Holiday screensaver (Christmas: Nov 1 – Jan 6) — replaces the clock screen and stays up all day instead of going black; night still goes black with Night mode</label>
       <label class="check"><input name="night_mode_enabled" type="checkbox"> Night mode (shorter timeout, straight to off)</label>
       <label class="check"><input name="night_dim_enabled" type="checkbox"> Night dim (warm overlay during the night window — requires Night mode)</label>
       <div class="row">
         <label>Night starts <input name="night_off_start" type="time"></label>
         <label>Night ends <input name="night_off_end" type="time"></label>
         <label>Night idle timeout (s) <input name="night_idle_timeout_s" type="number" min="5" class="narrow"></label>
+      </div>
+      <label class="check"><input name="backlight_control" type="checkbox"> Backlight control (DDC/CI) — dims the panel at night and when the screen is black</label>
+      <div class="row">
+        <label>Day brightness (0–100) <input name="brightness_active" type="number" min="0" max="100" class="narrow"></label>
+        <label>Night (% of day) <input name="brightness_night_pct" type="number" min="0" max="100" class="narrow"></label>
+        <label>Black screen (0–100) <input name="brightness_off" type="number" min="0" max="100" class="narrow"></label>
       </div>
       <label>Alarm volume <span id="volume-value"></span>
         <input name="alarm_volume" type="range" min="0" max="100">

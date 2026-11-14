@@ -16,6 +16,8 @@
 │  ├── timer_engine   asyncio, server-authoritative, 1 Hz ticks      │
 │  ├── idle           ACTIVE→CLOCK→OFF, night window, inhibitors     │
 │  ├── display_ctl    wlopm (Wayland) / xset (X11) / mock (dev)      │
+│  │                  + ddcutil backlight (DDC/CI brightness)        │
+│  ├── screensaver    seasonal photo deck for the idle clock         │
 │  ├── input_watch    evdev touch listener → wake                    │
 │  └── extractor      recipe-scrapers + readability fallback         │
 │                                                                    │
@@ -50,6 +52,37 @@ the display back on. Inside the night window ACTIVE goes straight to OFF after
 a shorter timeout. Wake comes from any client's activity ping or from the
 evdev touch listener (works while the panel is dark). The scrim swallows the
 wake tap so it can't press a random button on the page beneath.
+
+**Holiday screensaver**: a deck (`backend/recipehud/decks/*.json`) is a
+curated list of real recipe URLs with a short name, category and blurb, plus
+the date window it is in season (Christmas: Nov 1 – Jan 6). While one is in
+season and `screensaver_enabled`, the CLOCK state *is* the screensaver — a
+rotating photo card per recipe over the clock — and CLOCK stops timing out to
+OFF in the daytime; the night window still blacks it out, and when the window
+ends an OFF panel returns to the screensaver on its own. No new display state:
+clients fetch `GET /api/screensaver` on entering CLOCK and fall back to the
+plain clock when it isn't active. The UI has a single source,
+`extension/content/screensaver.js`: the overlay runs it as a content script,
+and the launcher's no-extension fallback loads the same file from
+`/ext/screensaver.js`. Photos are local `/media` snapshots (a boot-time warm
+pass extracts each deck URL and snapshots its image) fetched as blobs, so they
+work offline and no recipe site's CSP can block them. Nothing on the
+screensaver is tappable — the evdev watcher wakes on touch-down before
+Chromium would deliver a click — so a card is saved from the toast that
+appears right after a wake, or from the launcher's "Holiday ideas" section
+(`POST /api/screensaver/add`, which tags it `christmas` + its category).
+
+**Backlight**: DPMS-off can't be used on this panel (it powers the touch
+controller), but DDC/CI brightness can: `display_ctl/ddc.py` drives VCP 0x10
+via `ddcutil`. The idle machine sets a target per state — `brightness_active`
+by day, `brightness_night_pct` of it inside the night window, `brightness_off`
+behind the black OFF scrim — and a single worker applies it. Writes happen only
+when the target changes (scalers often persist brightness to EEPROM), every
+write is read back (ddcutil's exit code is 0 even for a rejected value), and a
+failed write retries until it lands so the panel can't be stranded dark. On
+the first probe the panel's own level is adopted as `brightness_active`. The
+mock display backend never gets a real backlight, so a scratch instance can't
+fight the appliance for the panel.
 
 **Clean view**: the backend fetches the URL and parses it with
 `recipe-scrapers` (schema.org fallback via `supported_only=False`), falling
@@ -124,7 +157,8 @@ go over REST. Client → server: throttled `{"type": "activity"}` pings.
 
 ## Repo map
 
-- `backend/recipehud/` — FastAPI app (`main.py` wires everything in lifespan)
+- `backend/recipehud/` — FastAPI app (`main.py` wires everything in lifespan);
+  `decks/` holds the seasonal screensaver decks
 - `frontend/{launcher,recipe,admin,shared}/` — vanilla JS, no build step
 - `extension/` — unpacked MV3 extension
 - `deploy/` — install.sh, systemd unit, kiosk script, labwc/kanshi snippets

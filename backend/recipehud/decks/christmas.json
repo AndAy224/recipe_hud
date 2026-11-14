@@ -1,0 +1,239 @@
+{
+  "theme": "christmas",
+  "tag": "christmas",
+  "season": {
+    "start": "11-01",
+    "end": "01-06"
+  },
+  "_comment": "Every url must extract as kind=recipe with an image (curl /api/recipe/extract?url=...&refresh=1). Optional yields/total_time_s override the extracted values (null hides them).",
+  "items": [
+    {
+      "url": "https://www.food.com/recipe/classic-eggnog-208276",
+      "name": "Classic Eggnog",
+      "category": "drink",
+      "emoji": "🥛",
+      "blurb": "Silky cooked custard nog with whipped cream, nutmeg, bourbon and brandy",
+      "yields": "About 3 quarts"
+    },
+    {
+      "url": "https://www.onceuponachef.com/recipes/mulled-wine.html",
+      "name": "Mulled Wine",
+      "category": "drink",
+      "emoji": "🍷",
+      "blurb": "Red wine warmed with brandy, orange, honey, cinnamon and star anise"
+    },
+    {
+      "url": "https://punchdrink.com/recipes/hot-buttered-rum/",
+      "name": "Hot Buttered Rum",
+      "category": "drink",
+      "emoji": "🧈",
+      "blurb": "Spiced brown sugar butter batter melting into dark rum and hot tea"
+    },
+    {
+      "url": "https://punchdrink.com/recipes/david-wondrichs-tom-jerry/",
+      "name": "Tom & Jerry",
+      "category": "drink",
+      "emoji": "⛄",
+      "blurb": "Fluffy spiced egg batter with VSOP cognac, Jamaican rum and milk"
+    },
+    {
+      "url": "https://preppykitchen.com/coquito/",
+      "name": "Coquito",
+      "category": "drink",
+      "emoji": "🥥",
+      "blurb": "Creamy Puerto Rican coconut and rum nog with cinnamon and nutmeg"
+    },
+    {
+      "url": "https://www.foodnetwork.com/recipes/wassail-3195274",
+      "name": "Spiked Wassail",
+      "category": "drink",
+      "emoji": "🍎",
+      "blurb": "Simmered apple cider with citrus, cloves and cinnamon, spiked with brandy"
+    },
+    {
+      "url": "https://www.spendwithpennies.com/cranberry-moscow-mule/",
+      "name": "Cranberry Moscow Mule",
+      "category": "drink",
+      "emoji": "🍹",
+      "blurb": "Vodka, cranberry and fresh lime topped with ginger beer and mint"
+    },
+    {
+      "url": "https://punchdrink.com/recipes/irish-coffee/",
+      "name": "Irish Coffee",
+      "category": "drink",
+      "emoji": "☕",
+      "blurb": "Hot coffee and Irish whiskey under a float of lightly whipped cream"
+    },
+    {
+      "url": "https://www.loveandlemons.com/hot-toddy/",
+      "name": "Hot Toddy",
+      "category": "drink",
+      "emoji": "🍯",
+      "blurb": "A soothing mug of whiskey, honey and fresh lemon in hot water"
+    },
+    {
+      "url": "https://www.tasteofhome.com/recipes/peppermint-white-russian/",
+      "name": "Peppermint White Russian",
+      "category": "drink",
+      "emoji": "🥃",
+      "blurb": "Peppermint vodka, coffee liqueur and cream in a candy cane-rimmed glass"
+    },
+    {
+      "url": "https://www.tasteofhome.com/recipes/cranberry-orange-sangria/",
+      "name": "Christmas Sangria",
+      "category": "drink",
+      "emoji": "🍊",
+      "blurb": "Fruity red wine, cranberries, orange and apple steeped overnight with orange liqueur"
+    },
+    {
+      "url": "https://www.tasteofhome.com/recipes/gingerbread-martinis/",
+      "name": "Gingerbread Martini",
+      "category": "drink",
+      "emoji": "🍸",
+      "blurb": "Vodka, coffee liqueur and Irish cream shaken with homemade gingerbread syrup"
+    },
+    {
+      "url": "https://www.recipetineats.com/standing-rib-roast/",
+      "name": "Prime Rib",
+      "category": "main",
+      "emoji": "🥩",
+      "blurb": "Bone-in rib roast slathered in garlic herb butter, with red wine sauce"
+    },
+    {
+      "url": "https://www.recipetineats.com/brown-sugar-ham-glaze/",
+      "name": "Glazed Ham",
+      "category": "main",
+      "emoji": "🍖",
+      "blurb": "Bone-in ham basted with a brown sugar, honey and Dijon glaze"
+    },
+    {
+      "url": "https://www.jamieoliver.com/recipes/beef/beef-wellington/",
+      "name": "Beef Wellington",
+      "category": "main",
+      "emoji": "🥐",
+      "blurb": "Beef fillet wrapped in mushroom pâté and puff pastry, with Madeira gravy"
+    },
+    {
+      "url": "https://www.foodnetwork.com/recipes/ina-garten/perfect-roast-turkey-recipe4-1943576",
+      "name": "Roast Turkey",
+      "category": "main",
+      "emoji": "🦃",
+      "blurb": "Butter-brushed turkey roasted with lemon, garlic, onion and a bunch of thyme"
+    },
+    {
+      "url": "https://www.foodnetwork.com/recipes/roasted-christmas-goose-recipe-1943222",
+      "name": "Roast Goose",
+      "category": "main",
+      "emoji": "🪿",
+      "blurb": "Salt-brined goose with chestnut stuffing, brandy basting syrup and Cumberland sauce",
+      "total_time_s": null
+    },
+    {
+      "url": "https://www.jamieoliver.com/recipes/pork/porchetta/",
+      "name": "Porchetta",
+      "category": "main",
+      "emoji": "🐖",
+      "blurb": "Pork loin and belly rolled around a fruit and pine nut stuffing"
+    },
+    {
+      "url": "https://www.jamieoliver.com/recipes/eggs/amazing-yorkies/",
+      "name": "Yorkshire Puddings",
+      "category": "side",
+      "emoji": "🍳",
+      "blurb": "Puffed, golden puddings from a simple batter poured into sizzling oil"
+    },
+    {
+      "url": "https://www.recipetineats.com/duck-fat-potatoes-crispiest-best-roast-potatoes/",
+      "name": "Crispy Roast Potatoes",
+      "category": "side",
+      "emoji": "🥔",
+      "blurb": "Semolina-dusted potatoes roasted in duck fat with rosemary and sea salt"
+    },
+    {
+      "url": "https://www.onceuponachef.com/recipes/roasted-brussels-sprouts-with-bacon-pecans-and-maple-syrup.html",
+      "name": "Brussels Sprouts & Bacon",
+      "category": "side",
+      "emoji": "🥬",
+      "blurb": "Roasted sprouts tossed with crispy bacon, pecans, balsamic and maple syrup"
+    },
+    {
+      "url": "https://www.budgetbytes.com/sausage-stuffing/",
+      "name": "Sausage Stuffing",
+      "category": "side",
+      "emoji": "🍞",
+      "blurb": "Toasted bread cubes baked with Italian sausage, apple, celery and poultry seasoning"
+    },
+    {
+      "url": "https://www.loveandlemons.com/glazed-carrots/",
+      "name": "Glazed Carrots",
+      "category": "side",
+      "emoji": "🥕",
+      "blurb": "Carrots glossed with butter, brown sugar, garlic and a squeeze of lemon"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/cranberry-sauce/",
+      "name": "Cranberry Sauce",
+      "category": "side",
+      "emoji": "🍒",
+      "blurb": "Cranberries simmered with brown sugar, fresh orange juice, zest and vanilla",
+      "yields": "About 2 cups"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/best-gingerbread-cookies/",
+      "name": "Gingerbread Cookies",
+      "category": "dessert",
+      "emoji": "🍪",
+      "blurb": "Molasses cookies generously spiced with ginger, cinnamon, allspice and cloves"
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/yule-log-cake-recipe",
+      "name": "Bûche de Noël",
+      "category": "dessert",
+      "emoji": "🪵",
+      "blurb": "Cocoa sponge rolled around mascarpone whipped cream, frosted in chocolate ganache"
+    },
+    {
+      "url": "https://www.onceuponachef.com/recipes/holiday-cut-out-sugar-cookies.html",
+      "name": "Sugar Cookies",
+      "category": "dessert",
+      "emoji": "⭐",
+      "blurb": "Buttery, almond-scented cut-outs ready for icing and decorating",
+      "yields": "About 5 dozen"
+    },
+    {
+      "url": "https://preppykitchen.com/peppermint-bark/",
+      "name": "Peppermint Bark",
+      "category": "dessert",
+      "emoji": "🍬",
+      "blurb": "Semisweet and white chocolate layers scattered with crushed candy canes"
+    },
+    {
+      "url": "https://www.onceuponachef.com/recipes/sticky-toffee-pudding.html",
+      "name": "Sticky Toffee Pudding",
+      "category": "dessert",
+      "emoji": "🍮",
+      "blurb": "Warmly spiced date cake drenched in a brown sugar toffee sauce"
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/old-fashioned-pecan-pie-recipe",
+      "name": "Pecan Pie",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Old-fashioned brown sugar filling, no corn syrup, crowned with pecan halves"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/snowball-cookies-recipe/",
+      "name": "Snowball Cookies",
+      "category": "dessert",
+      "emoji": "❄️",
+      "blurb": "Melt-in-your-mouth vanilla butter cookies rolled in powdered sugar"
+    },
+    {
+      "url": "https://www.spendwithpennies.com/fantasy-fudge/",
+      "name": "Fantasy Fudge",
+      "category": "dessert",
+      "emoji": "🍫",
+      "blurb": "Classic chocolate fudge with marshmallow fluff and chopped walnuts"
+    }
+  ]
+}

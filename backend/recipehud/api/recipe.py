@@ -134,20 +134,30 @@ async def rename_recipe(request: Request, body: RenameBody):
     return _summary(await db.fetchone(SAVED_SUMMARY + " AND url = ?", (url,)))
 
 
-@router.post("/save")
-async def save_recipe(request: Request, body: RecipeUrlBody):
-    url = str(body.url)
-    db = request.app.state.db
+async def save_url(state, url: str, add_tags: list[str] | None = None) -> dict:
+    """Mark a recipe saved (extracting it first if needed), optionally merging
+    tags, and tell clients. Shared by /save and the screensaver's add."""
+    db = state.db
     try:
-        await extract(db, request.app.state.store, url)
+        await extract(db, state.store, url)
     except ExtractionError as exc:
         raise HTTPException(422, str(exc))
     saved_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
     await db.execute(
         "UPDATE recipe_cache SET saved = 1, saved_at = ? WHERE url = ?", (saved_at, url))
+    if add_tags:
+        row = await db.fetchone("SELECT tags FROM recipe_cache WHERE url = ?", (url,))
+        existing = [t for t in (row["tags"] or "").split(",") if t]
+        tags = ",".join(normalize_tags(existing + add_tags))
+        await db.execute("UPDATE recipe_cache SET tags = ? WHERE url = ?", (tags, url))
     await snapshot_image(db, url)  # best-effort; remote URL stays as fallback
-    await request.app.state.hub.broadcast("recipes.updated", {})
+    await state.hub.broadcast("recipes.updated", {})
     return _summary(await db.fetchone(SAVED_SUMMARY + " AND url = ?", (url,)))
+
+
+@router.post("/save")
+async def save_recipe(request: Request, body: RecipeUrlBody):
+    return await save_url(request.app.state, str(body.url))
 
 
 @router.post("/unsave")

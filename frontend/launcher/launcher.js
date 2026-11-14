@@ -116,6 +116,70 @@ function renderMyRecipes() {
   }));
 }
 
+// --------------------------------------------------------- holiday ideas
+// The screensaver deck, browsable while awake: the calm place to save a card
+// (the after-wake toast is the other). Hidden out of season.
+
+let holidayItems = [];
+
+async function loadHolidayIdeas() {
+  let deck = null;
+  try {
+    deck = await (await fetch("/api/screensaver")).json();
+  } catch { /* backend unreachable */ }
+  holidayItems = (deck && deck.active && deck.items) || [];
+  renderHolidayIdeas();
+}
+
+function pickHolidayIdeas(count) {
+  // Unsaved first (that's the point of suggestions), random within each group.
+  const shuffled = holidayItems.slice().sort(() => Math.random() - 0.5);
+  return [...shuffled.filter((i) => !i.saved), ...shuffled.filter((i) => i.saved)].slice(0, count);
+}
+
+function renderHolidayIdeas() {
+  $("holiday-ideas").hidden = holidayItems.length === 0;
+  $("holiday-more").hidden = holidayItems.length <= 4;
+  $("holiday-tiles").replaceChildren(...pickHolidayIdeas(4).map((item) => {
+    const tile = document.createElement("div");
+    tile.className = "recipe-tile holiday-tile";
+    if (item.image) tile.style.backgroundImage = `url("${item.image}")`;
+    else tile.classList.add("no-photo");
+    tile.innerHTML = `
+      <span class="ht-emoji"></span>
+      <button class="ht-add"></button>
+      <span class="rt-shade"><span class="rt-title"></span><span class="rt-host"></span></span>`;
+    tile.querySelector(".ht-emoji").textContent = item.image ? "" : item.emoji;
+    tile.querySelector(".rt-title").textContent = item.name;
+    tile.querySelector(".rt-host").textContent = item.blurb;
+    const add = tile.querySelector(".ht-add");
+    const showSaved = () => { add.textContent = "✓"; add.classList.add("saved"); add.title = "In My Recipes"; };
+    if (item.saved) showSaved();
+    else { add.textContent = "＋"; add.title = "Add to My Recipes"; }
+    add.onclick = async (ev) => {
+      ev.stopPropagation();
+      if (item.saved) return;
+      add.textContent = "…";
+      try {
+        const res = await fetch("/api/screensaver/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: item.url }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        item.saved = true;
+        showSaved();
+      } catch {
+        add.textContent = "＋";
+      }
+    };
+    tile.onclick = () => { location.href = `/recipe?url=${encodeURIComponent(item.url)}`; };
+    return tile;
+  }));
+}
+
+$("holiday-more").onclick = renderHolidayIdeas;
+
 // --------------------------------------------------------------- weather
 
 async function loadWeather() {
@@ -340,8 +404,29 @@ $("keep-awake").onclick = async () => {
 
 let alarmAudio = null;
 
+// The fallback scrim gets the same seasonal screensaver as the extension.
+// Created lazily: the extension's host element is injected at document_start,
+// so by the time a display state arrives hasExtension() is settled.
+let fallbackSaver;
+function getFallbackSaver() {
+  if (fallbackSaver === undefined) {
+    fallbackSaver = null;
+    if (!hasExtension() && globalThis.RHScreensaver) {
+      RHScreensaver.injectCss(document);
+      fallbackSaver = RHScreensaver.create({
+        backend: "",
+        scrim: $("scrim"),
+        root: document.body,
+        isBlocked: () => $("alarm-flash").classList.contains("visible"),
+      });
+    }
+  }
+  return fallbackSaver;
+}
+
 function showAlarm(data) {
   if (hasExtension()) return;
+  getFallbackSaver()?.hideToast();
   $("alarm-label").textContent = `${data.label} — done!`;
   $("alarm-flash").classList.add("visible");
   $("alarm-flash").dataset.timerId = data.id;
@@ -363,6 +448,7 @@ $("alarm-dismiss").onclick = () => {
 
 function setDisplayState(state) {
   if (hasExtension()) return;
+  getFallbackSaver()?.setState(state);
   const scrim = $("scrim");
   scrim.classList.toggle("visible", state !== "active");
   scrim.classList.toggle("mode-off", state === "off");
@@ -412,11 +498,16 @@ const ws = new WSClient("launcher", (type, data) => {
   } else if (type === "settings.updated") {
     Object.assign(settings, data);
     renderKeepAwake(); applyTheme(); applyNight();
+    if ("screensaver_enabled" in data) {
+      loadHolidayIdeas();
+      getFallbackSaver()?.refresh();
+    }
   } else if (type === "night.state") {
     nightNow = !!data.night;
     applyNight();
   } else if (type === "recipes.updated") {
     loadMyRecipes();
+    loadHolidayIdeas();
   }
 });
 
@@ -424,4 +515,5 @@ document.addEventListener("pointerdown", () => ws.sendActivity(), { capture: tru
 
 loadSites();
 loadMyRecipes();
+loadHolidayIdeas();
 loadWeather();

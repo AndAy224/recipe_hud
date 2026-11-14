@@ -16,9 +16,11 @@ echo "-- apt packages"
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
     wlopm wlr-randr kanshi python3-venv python3-dev curl \
-    fonts-noto-color-emoji
+    fonts-noto-color-emoji ddcutil
 # fonts-noto-color-emoji: the whole UI uses emoji as icons (site tiles, timers,
 # buttons). Without a color-emoji font they render blank on a fresh Pi.
+# ddcutil: backlight dimming over DDC/CI (display_ctl/ddc.py). The desktop user
+# reaches /dev/i2c-* via the "i2c" group; without DDC the feature just no-ops.
 # Chromium's package name varies by Pi OS release: "chromium" on Bookworm/Trixie,
 # "chromium-browser" on older Buster/Bullseye. Install whichever is available.
 if ! sudo apt-get install -y --no-install-recommends chromium; then

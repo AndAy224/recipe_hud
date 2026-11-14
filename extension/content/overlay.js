@@ -102,7 +102,9 @@ button:active { filter: brightness(1.3); }
   host.id = "recipehud-overlay-host";
   const shadow = host.attachShadow({ mode: "closed" });
   const sheet = new CSSStyleSheet();
-  sheet.replaceSync(CSS);
+  // content/screensaver.js runs first (manifest order) and defines this.
+  const Saver = globalThis.RHScreensaver;
+  sheet.replaceSync(CSS + (Saver ? Saver.CSS : ""));
   shadow.adoptedStyleSheets = [sheet];
 
   const root = document.createElement("div");
@@ -137,6 +139,12 @@ button:active { filter: brightness(1.3); }
   document.documentElement.appendChild(host);
 
   const $ = (sel) => root.querySelector(sel);
+
+  // Seasonal screensaver: lives inside the scrim (so the scrim's wake tap and
+  // hide/show cover it) and replaces the plain clock while a deck is in season.
+  const saver = Saver
+    ? Saver.create({ backend: BACKEND, scrim: $(".scrim"), root, isBlocked: () => !$(".alarm").hidden })
+    : null;
 
   const fmt = (total) => {
     const s = Math.max(0, Math.round(total));
@@ -272,6 +280,7 @@ button:active { filter: brightness(1.3); }
   // ----------------------------------------------------- alarm + scrims
 
   function showAlarm(data) {
+    if (saver) saver.hideToast();
     alarmTimerId = data.id;
     $(".a-label").textContent = `${data.label} — done!`;
     $(".alarm").hidden = false;
@@ -306,6 +315,7 @@ button:active { filter: brightness(1.3); }
   }
 
   function setDisplayState(state) {
+    if (saver) saver.setState(state);
     const scrim = $(".scrim");
     scrim.hidden = state === "active";
     scrim.classList.toggle("mode-off", state === "off");
@@ -375,6 +385,7 @@ button:active { filter: brightness(1.3); }
         nightDimEnabled = !!data.night_dim_enabled;
         applyNight();
       }
+      if ("screensaver_enabled" in data && saver) saver.refresh();
     } else if (type === "navigate") {
       location.href = data.url;
     }

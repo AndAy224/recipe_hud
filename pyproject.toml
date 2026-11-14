@@ -28,4 +28,4 @@ build-backend = "setuptools.build_meta"
 where = ["backend"]
 
 [tool.setuptools.package-data]
-recipehud = ["schema.sql"]
+recipehud = ["schema.sql", "decks/*.json"]

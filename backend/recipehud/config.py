@@ -20,8 +20,12 @@ class Config(BaseSettings):
     # Local copies of saved-recipe images (served at /media).
     media_dir: Path = REPO_ROOT / "data" / "media"
     frontend_dir: Path = REPO_ROOT / "frontend"
+    extension_dir: Path = REPO_ROOT / "extension"
     # auto | wlopm | x11 | mock
     display_backend: str = "auto"
+    # auto | ddc | none — backlight brightness (display_ctl/ddc.py). "auto" is
+    # ddcutil when installed, but never alongside the mock display backend.
+    backlight: str = "auto"
     debug: bool = False
     # Where the kiosk's Home button / launcher lives, as seen from the Pi itself.
     launcher_url: str = "http://localhost:8000/"

@@ -24,3 +24,11 @@ async def force_idle_state(request: Request, state: str):
 async def simulate_touch(request: Request):
     request.app.state.idle.activity("debug")
     return request.app.state.idle.status()
+
+
+@router.post("/screensaver/warm")
+async def warm_screensaver(request: Request):
+    """Run a screensaver cache warm pass now instead of waiting for the boot one."""
+    from ..screensaver import warm
+
+    return await warm(request.app.state.db, request.app.state.store)

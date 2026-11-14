@@ -3,6 +3,8 @@ import datetime
 import logging
 import time
 
+from .display_ctl.ddc import NullBacklight
+from .screensaver import active_deck
 from .settings_store import SettingsStore
 from .timer_engine import TimerEngine
 
@@ -28,10 +30,18 @@ class IdleController:
     Clients render clock/black scrims on `display.state` events; we only cut
     panel power in OFF. Inside the night window, ACTIVE goes straight to OFF
     after the (shorter) night timeout. Touch/WS activity wakes from any state.
+
+    While a seasonal screensaver deck is in season, CLOCK *is* the
+    screensaver and never times out to OFF in the daytime; the night window
+    still blacks it out, and when the window ends an OFF panel comes back to
+    the screensaver by itself. The backlight follows the state: dimmed at
+    night, down to `brightness_off` behind the black OFF scrim.
     """
 
-    def __init__(self, display, broadcast, store: SettingsStore, engine: TimerEngine):
+    def __init__(self, display, broadcast, store: SettingsStore, engine: TimerEngine,
+                 backlight=None):
         self.display = display
+        self.backlight = backlight or NullBacklight()
         self.broadcast = broadcast
         self.store = store
         self.engine = engine
@@ -60,6 +70,8 @@ class IdleController:
             "inhibitors": self.inhibitors(),
             "night": self._in_night_window(),
             "backend": self.display.name,
+            "screensaver": self._saver_active(),
+            "backlight": self.backlight.status(),
         }
 
     # -- activity / manual control --------------------------------------
@@ -126,6 +138,10 @@ class IdleController:
         while True:
             try:
                 await self._step()
+                # Every tick, not just on transitions: settings edits and the
+                # night flip land here too. Cheap — the backlight worker only
+                # writes when the target actually changes.
+                self._sync_backlight()
             except Exception:
                 log.exception("idle step failed")
             await asyncio.sleep(1)
@@ -135,8 +151,15 @@ class IdleController:
         # engages even while a timer inhibits blanking.
         night = self._in_night_window()
         if night != self._night:
+            # `_night` starts as None, so a backend (re)start is not a flip.
+            night_ended = self._night is True and not night
             self._night = night
             await self.broadcast("night.state", {"night": night})
+            if night_ended and self.state == OFF and self._saver_active():
+                # Morning: the screensaver replaces the black screen in the
+                # daytime, so don't leave the panel black until someone taps.
+                log.info("night window ended; back to the screensaver")
+                await self.show_clock()
         # A ringing alarm must be seen/heard: force the display awake.
         if self.engine.has_ringing() and (self.state != ACTIVE or not self.display.is_on()):
             await self.wake()
@@ -162,7 +185,9 @@ class IdleController:
             if idle_for < 1:
                 # Activity raced the loop; wake handles the transition.
                 return
-            if night or in_state_for > self.store.get("clock_to_off_s"):
+            if night:
+                await self.force_off()
+            elif not self._saver_active() and in_state_for > self.store.get("clock_to_off_s"):
                 await self.force_off()
 
     # -- internals -------------------------------------------------------
@@ -172,6 +197,28 @@ class IdleController:
             log.info("display state: %s -> %s", self.state, state)
         self.state = state
         self._state_since = time.monotonic()
+        self._sync_backlight()
+
+    def _saver_active(self) -> bool:
+        return active_deck(self.store) is not None
+
+    def _brightness_target(self) -> int:
+        store = self.store
+        active = store.get("brightness_active")
+        if not store.get("backlight_control"):
+            # Pinned at the day level, so switching control off from a dimmed
+            # state can't strand the panel dark.
+            return active
+        if self.state == OFF:
+            return store.get("brightness_off")
+        if self._in_night_window():
+            return round(active * store.get("brightness_night_pct") / 100)
+        return active
+
+    def _sync_backlight(self) -> None:
+        # Non-blocking: wake() has already flipped state before this runs and
+        # announces right after, so the scrim never waits on DDC.
+        self.backlight.request(self._brightness_target())
 
     def _in_night_window(self) -> bool:
         if not self.store.get("night_mode_enabled"):

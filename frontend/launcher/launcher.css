@@ -99,6 +99,26 @@ h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-s
 .recipe-tile .rt-title { font-size: 1.25rem; font-weight: 700; line-height: 1.15; text-shadow: 0 1px 3px #000; }
 .recipe-tile .rt-host { font-size: 0.85rem; opacity: 0.85; }
 
+/* Holiday ideas: recipe-tile look plus a save corner button */
+/* Taller than a plain recipe tile: name + 2-line blurb must stay clear of
+   the corner button. */
+.holiday-tile { position: relative; cursor: pointer; min-height: 220px; }
+.holiday-tile.no-photo { background: radial-gradient(circle at 50% 35%, #2a6b47, #10301f); }
+.holiday-tile .ht-emoji {
+  position: absolute; top: 18%; left: 0; right: 0; text-align: center; font-size: 3.4rem;
+}
+.holiday-tile .rt-host {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.holiday-tile .ht-add {
+  position: absolute; top: 0.6rem; right: 0.6rem; min-height: 0;
+  width: 64px; height: 64px; padding: 0; border-radius: 50%;
+  font-size: 1.9rem; line-height: 1; background: #b3263a; color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.holiday-tile .ht-add.saved { background: #2f6f45; }
+#holiday-more { width: 100%; margin-top: 0.9rem; font-size: 1.1rem; }
+
 /* Send-from-phone sheet */
 #send-qr { width: 340px; max-width: 80%; align-self: center; }
 #send-url { text-align: center; font-size: 1.15rem; color: var(--muted); word-break: break-all; user-select: text; }

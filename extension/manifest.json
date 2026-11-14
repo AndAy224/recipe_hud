@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Recipe HUD Overlay",
-  "version": "0.1.0",
-  "description": "Floating kitchen toolbar for the Recipe HUD kiosk: home button, cooking timers, alarms and idle screens on any recipe site.",
+  "version": "0.2.0",
+  "description": "Floating kitchen toolbar for the Recipe HUD kiosk: home button, cooking timers, alarms, idle screens and the holiday screensaver on any recipe site.",
   "background": { "service_worker": "sw.js" },
   "permissions": ["offscreen", "alarms"],
   "host_permissions": ["http://localhost:8000/*"],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/overlay.js"],
+      "js": ["content/screensaver.js", "content/overlay.js"],
       "run_at": "document_start",
       "all_frames": false
     }

@@ -29,6 +29,12 @@ touch panel mounted portrait (720 wide × 2560 tall).
   API key) → display off; wakes on touch; night schedule with a warm dim
   veil; "keep awake" cooking mode; a running timer always keeps the screen
   available.
+- **Holiday screensaver** — in season (Christmas: Nov 1 – Jan 6) the idle
+  screen becomes a rotating photo showcase of festive cocktails, roasts, sides
+  and desserts — real recipes, cached for offline — instead of going black in
+  the daytime. Tap to wake and a toast offers to add the one you just saw to
+  My Recipes; there's also a "Holiday ideas" row on the launcher. At night the
+  panel still goes black, with the backlight really dimmed over DDC/CI.
 - **Send-to-kiosk** — scan the QR on the launcher (📲) to open `/send` on
   your phone; paste any recipe link and it opens on the kitchen display,
   optionally straight into clean view.

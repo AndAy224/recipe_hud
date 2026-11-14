@@ -28,6 +28,18 @@ DEFAULTS: dict = {
     "recipe_cache_max_age_days": 30,
     "weather_location": "",         # "lat,lon" for Open-Meteo (v1.5)
     "wine_pairing_enabled": True,   # suggest a wine pairing per recipe
+    # Seasonal screensaver (decks/*.json, each with its own date window). While
+    # one is in season it is how the CLOCK state looks, and CLOCK stops timing
+    # out to OFF in the daytime — night still goes black via the night window.
+    "screensaver_enabled": True,
+    # Backlight over DDC/CI (display_ctl/ddc.py). brightness_active is the
+    # panel's own 0-100 value; it is adopted from the panel on the first probe
+    # (see DdcBacklight) so taking control never changes what people are used
+    # to. Night scales it; OFF is absolute.
+    "backlight_control": True,
+    "brightness_active": 100,
+    "brightness_night_pct": 50,     # % of brightness_active inside the night window
+    "brightness_off": 0,            # backlight behind the black OFF scrim
 }
 
 # The admin panel has no login; a hash left over from when it did must still
@@ -41,15 +53,21 @@ class SettingsStore:
     def __init__(self, db: Database):
         self.db = db
         self._cache: dict = {}
+        self._stored: set[str] = set()  # keys with a row in the DB (vs. defaults)
         self._listeners: list = []  # callables invoked with dict of changed keys
 
     async def load(self) -> None:
         rows = await self.db.fetchall("SELECT key, value FROM settings")
         stored = {r["key"]: json.loads(r["value"]) for r in rows}
+        self._stored = set(stored)
         self._cache = {**DEFAULTS, **stored}
 
     def get(self, key: str):
         return self._cache[key]
+
+    def is_stored(self, key: str) -> bool:
+        """True once the key has been explicitly set (it has a DB row)."""
+        return key in self._stored
 
     def public(self) -> dict:
         return {k: v for k, v in self._cache.items() if k not in SECRET_KEYS}
@@ -87,3 +105,4 @@ class SettingsStore:
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             (key, json.dumps(self._cache[key])),
         )
+        self._stored.add(key)
