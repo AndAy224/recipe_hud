@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shopping list</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/list/list.css">
+</head>
+<body>
+  <p id="loading" class="hint">Loading the recipe…</p>
+  <p id="error" class="hint err" hidden></p>
+
+  <main id="list" hidden>
+    <h1 id="title"></h1>
+    <p id="meta" class="hint"></p>
+    <p class="hint">Tick what you already have, then copy the rest into your notes app.</p>
+    <ul id="items"></ul>
+    <div class="actions">
+      <button id="copy" class="primary"></button>
+      <button id="reset">Untick all</button>
+    </div>
+    <p id="status" class="hint"></p>
+    <p class="hint small">This page lives on the kitchen display and only loads on your home Wi-Fi — copy the list before you head to the shop.</p>
+  </main>
+
+  <script type="module" src="/list/list.js"></script>
+</body>
+</html>

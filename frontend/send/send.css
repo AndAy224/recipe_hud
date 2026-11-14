@@ -28,3 +28,5 @@ button { min-height: 64px; font-size: 1.1rem; }
 #status { min-height: 1.4em; font-size: 1.05rem; }
 #status.ok { color: var(--accent-2); }
 #status.err { color: var(--danger); }
+
+a { color: var(--accent); }

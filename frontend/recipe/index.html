@@ -65,6 +65,7 @@
     <section id="ingredients-section" hidden>
       <div class="ing-head">
         <h2>Ingredients</h2>
+        <button id="to-phone" title="Shopping list on your phone">📱 List</button>
         <div class="scale-ctl" id="scale-main"></div>
       </div>
       <ul id="ingredients"></ul>
@@ -98,6 +99,16 @@
     <div id="cm-nav">
       <button id="cm-prev">‹ Back</button>
       <button id="cm-next" class="primary">Next ›</button>
+    </div>
+  </div>
+
+  <!-- Phone hand-off: a QR that opens these ingredients as a checklist -->
+  <div id="phone-sheet" hidden>
+    <div class="ps-body">
+      <h2>Shopping list on your phone</h2>
+      <div class="ps-qr"><img id="phone-qr" alt="QR code that opens the shopping list"></div>
+      <p id="phone-hint"></p>
+      <button id="phone-close" class="primary">Close</button>
     </div>
   </div>
 

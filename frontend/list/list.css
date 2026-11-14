@@ -1,0 +1,36 @@
+/* Phone companion: a recipe's ingredients as a tick-off shopping list. */
+
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.2rem 1.1rem 2.5rem;
+  user-select: auto;
+}
+
+h1 { font-size: 1.5rem; line-height: 1.2; margin: 0.3rem 0 0.2rem; }
+.hint { color: var(--muted); margin: 0.2rem 0 0.6rem; }
+.hint.small { font-size: 0.85rem; margin-top: 1rem; }
+.hint.err { color: var(--danger); }
+#status:empty { display: none; }
+#status.ok { color: var(--accent-2); }
+
+#items { list-style: none; padding: 0; margin: 0.8rem 0; display: flex; flex-direction: column; gap: 0.45rem; }
+#items li {
+  background: var(--bg-raised); border-radius: 14px;
+  padding: 0.8rem 0.9rem; font-size: 1.1rem; line-height: 1.35;
+  display: flex; align-items: baseline; gap: 0.7rem; cursor: pointer;
+}
+#items li::before { content: "○"; color: var(--accent); flex: none; }
+#items li.have { opacity: 0.45; text-decoration: line-through; }
+#items li.have::before { content: "●"; }
+
+/* Sticky bar with a solid backing, so list rows don't show through between
+   and behind the buttons as they scroll under it. */
+.actions {
+  display: flex; gap: 0.6rem; position: sticky; bottom: 0;
+  margin: 0 -1.1rem; padding: 0.7rem 1.1rem 0.8rem;
+  background: var(--bg);
+  box-shadow: 0 -10px 14px -6px var(--bg);
+}
+.actions button { min-height: 60px; font-size: 1.05rem; }
+#copy { flex: 1; }

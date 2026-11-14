@@ -189,6 +189,9 @@ app.mount("/shared", StaticFiles(directory=FRONTEND / "shared"), name="shared")
 app.mount("/admin", StaticFiles(directory=FRONTEND / "admin", html=True), name="admin")
 app.mount("/recipe", StaticFiles(directory=FRONTEND / "recipe"), name="recipe")
 app.mount("/send", StaticFiles(directory=FRONTEND / "send", html=True), name="send")
+# Phone companion pages: live timers, and a recipe's ingredients as a checklist.
+app.mount("/timers", StaticFiles(directory=FRONTEND / "timers", html=True), name="timers")
+app.mount("/list", StaticFiles(directory=FRONTEND / "list", html=True), name="list")
 app.mount("/", StaticFiles(directory=FRONTEND / "launcher", html=True), name="launcher")
 
 # Bare-path prefixes for html=True mounts (e.g. "/admin", "/send"), read by the

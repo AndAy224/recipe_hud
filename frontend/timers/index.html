@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kitchen timers</title>
+  <link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/timers/timers.css">
+</head>
+<body>
+  <header>
+    <h1>⏱ Kitchen timers</h1>
+    <span id="conn" class="conn">connecting…</span>
+  </header>
+
+  <!-- Shown while anything is ringing in the kitchen -->
+  <section id="alarm" class="alarm" hidden>
+    <div id="alarm-label"></div>
+    <div class="row">
+      <button id="alarm-dismiss" class="primary">Dismiss</button>
+      <button id="alarm-extend">+1 minute</button>
+    </div>
+  </section>
+
+  <section id="timers"></section>
+  <p id="empty" class="hint" hidden>No timers running. Start one below — it shows up on the kitchen display too.</p>
+
+  <h2>Start a timer</h2>
+  <div id="presets" class="chips"></div>
+  <form id="new-timer" class="row">
+    <input id="new-label" placeholder="Label" value="Timer" maxlength="60" autocomplete="off">
+    <input id="new-minutes" type="number" inputmode="numeric" min="1" max="2880" placeholder="min" required>
+    <button class="primary">Start</button>
+  </form>
+  <p id="status" class="hint"></p>
+
+  <label class="check">
+    <input id="sound" type="checkbox"> Also ring on this phone while this page is open
+  </label>
+  <p class="hint small">This page only updates while it is open, on your home Wi-Fi. It can't notify you once it is closed.</p>
+
+  <nav><a href="/send/">📲 Send a recipe to the kitchen display</a></nav>
+
+  <script type="module" src="/timers/timers.js"></script>
+</body>
+</html>

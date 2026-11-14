@@ -1,0 +1,70 @@
+/* Phone companion: the kitchen's timers, one column, thumb-sized targets. */
+
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.2rem 1.1rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  user-select: auto;
+}
+
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; }
+h1 { font-size: 1.4rem; margin: 0.3rem 0; }
+h2 { font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 1rem 0 0; }
+.hint { color: var(--muted); margin: 0; }
+.hint.small { font-size: 0.85rem; }
+.conn { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.conn.ok { color: var(--accent-2); }
+.conn.down { color: var(--danger); }
+
+button { min-height: 56px; font-size: 1.05rem; }
+.row { display: flex; gap: 0.6rem; align-items: stretch; }
+
+#timers { display: flex; flex-direction: column; gap: 0.6rem; }
+.timer {
+  background: var(--bg-raised);
+  border-radius: 14px;
+  border-left: 6px solid var(--accent-2);
+  padding: 0.8rem 0.9rem;
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+.timer.paused { border-left-color: var(--muted); opacity: 0.85; }
+.timer.ringing { border-left-color: var(--danger); }
+.timer .t-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; }
+.timer .t-label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timer .t-time { font-size: 1.9rem; font-variant-numeric: tabular-nums; }
+.timer.ringing .t-time { color: var(--danger); font-weight: 700; }
+.timer .t-actions { display: flex; gap: 0.5rem; }
+.timer .t-actions button { flex: 1; min-height: 52px; background: var(--bg); padding: 0.3rem 0.5rem; }
+.timer .t-actions button.danger { background: var(--danger); }
+
+.alarm {
+  border-radius: 14px; padding: 1rem; color: #fff;
+  display: flex; flex-direction: column; gap: 0.8rem;
+  animation: alarm-pulse 1s infinite;
+}
+.alarm #alarm-label { font-size: 1.5rem; font-weight: 700; text-align: center; }
+.alarm .row button { flex: 1; }
+.alarm #alarm-dismiss { background: #fff; color: #14161a; }
+.alarm #alarm-extend { background: rgba(255, 255, 255, 0.25); color: #fff; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chips button { min-height: 52px; padding: 0.3rem 0.9rem; }
+
+#new-timer input {
+  font: inherit; color: var(--fg); background: var(--bg-raised);
+  border: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+  border-radius: 14px; padding: 0.7rem 0.8rem; min-height: 56px; min-width: 0;
+}
+#new-label { flex: 1; }
+#new-minutes { width: 5.2rem; }
+#status:empty { display: none; }
+#status.err { color: var(--danger); }
+
+.check { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.check input { width: 1.4rem; height: 1.4rem; flex: none; }
+
+nav { margin-top: 0.8rem; }
+nav a { color: var(--accent); }

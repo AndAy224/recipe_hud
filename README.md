@@ -42,6 +42,11 @@ touch panel mounted portrait (720 wide × 2560 tall).
 - **Send-to-kiosk** — scan the QR on the launcher (📲) to open `/send` on
   your phone; paste any recipe link and it opens on the kitchen display,
   optionally straight into clean view.
+- **Phone companion** — `/timers` shows the kitchen's timers live on your
+  phone and lets you pause, extend, dismiss or start one from another room
+  (without waking the kitchen display). On a recipe, **📱 List** shows a QR
+  that opens the ingredients — at the scale you chose — as a tick-off list:
+  tick what you already have, then copy the rest into your notes app.
 - **Admin panel** — manage sites, presets, timeouts and the display from any
   browser on your LAN: `http://<pi>.local:8000/admin` (no login — the API is
   open to your LAN by design).

@@ -477,6 +477,29 @@ $("cm-next").onclick = () => {
 $("cm-ing-toggle").onclick = () => { $("cm-ingredients").hidden = false; };
 $("cm-ing-close").onclick = () => { $("cm-ingredients").hidden = true; };
 
+// ------------------------------------------------------- phone hand-off
+// A QR that opens /list on a phone: these ingredients, at the scale showing
+// here, as a tick-off list that can be copied into a notes app.
+
+$("to-phone").onclick = () => {
+  if (!currentData) return;
+  const path = `/list?url=${encodeURIComponent(currentData.url)}&scale=${scaleFactor}`;
+  const scaled = SCALE_STEPS.find(([factor]) => factor === scaleFactor);
+  $("phone-hint").textContent =
+    "Scan with your phone's camera (it must be on the same Wi-Fi). "
+    + `The ingredients${scaleFactor !== 1 && scaled ? ` at ${scaled[1]}` : ""} open as a list to tick off and copy.`;
+  $("phone-qr").hidden = false;
+  $("phone-qr").src = `/api/send/qr.svg?plain=1&path=${encodeURIComponent(path)}`;
+  $("phone-sheet").hidden = false;
+};
+$("phone-qr").onerror = () => {
+  $("phone-qr").hidden = true;
+  $("phone-hint").textContent =
+    "No network address detected, so there is nothing to scan. Check the Pi's network connection.";
+};
+$("phone-close").onclick = () => { $("phone-sheet").hidden = true; };
+$("phone-sheet").onclick = (ev) => { if (ev.target === $("phone-sheet")) $("phone-sheet").hidden = true; };
+
 $("open-original").onclick = () => { location.href = targetUrl; };
 $("error-original").onclick = () => { location.href = targetUrl; };
 $("error-home").onclick = () => { location.href = "/"; };

@@ -132,6 +132,7 @@ h2 { font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-s
 
 /* Send-from-phone sheet */
 #send-qr { width: 340px; max-width: 80%; align-self: center; }
+.sheet-note { text-align: center; color: var(--muted); margin: 0; }
 #send-url { text-align: center; font-size: 1.15rem; color: var(--muted); word-break: break-all; user-select: text; }
 
 main { flex: 1; padding-bottom: 1rem; }

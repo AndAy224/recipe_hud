@@ -157,8 +157,10 @@ update as "running" only while that pid is alive.
 
 ## WebSocket protocol
 
-`GET /ws?role=launcher|overlay|admin` — server → client events; all commands
-go over REST. Client → server: throttled `{"type": "activity"}` pings.
+`GET /ws?role=launcher|overlay|admin|recipe|phone` — server → client events;
+all commands go over REST. Client → server: throttled `{"type": "activity"}`
+pings — which wake the panel, so the phone pages (`/timers`, `/list`) never
+send them.
 
 | Event | Payload |
 |---|---|
@@ -177,7 +179,9 @@ go over REST. Client → server: throttled `{"type": "activity"}` pings.
 
 - `backend/recipehud/` — FastAPI app (`main.py` wires everything in lifespan);
   `decks/` holds the seasonal screensaver decks
-- `frontend/{launcher,recipe,admin,shared}/` — vanilla JS, no build step
+- `frontend/{launcher,recipe,admin,shared}/` — vanilla JS, no build step;
+  `frontend/{send,timers,list}/` are the phone pages (push a URL, live timers,
+  a recipe's ingredients as a checklist)
 - `extension/` — unpacked MV3 extension
 - `deploy/` — install.sh, systemd unit, kiosk script, labwc/kanshi snippets
 - `scripts/` — dev server, DB seed, alarm generator, and the standalone test

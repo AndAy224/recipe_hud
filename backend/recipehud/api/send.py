@@ -6,7 +6,7 @@ import io
 import socket
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from ..config import CONFIG
 from ..models import SendBody
@@ -29,9 +29,13 @@ def _lan_ip() -> str | None:
     return ip
 
 
-def _send_url() -> str | None:
+def _lan_url(path: str = "/send") -> str | None:
     ip = _lan_ip()
-    return f"http://{ip}:{CONFIG.port}/send" if ip else None
+    return f"http://{ip}:{CONFIG.port}{path}" if ip else None
+
+
+def _send_url() -> str | None:
+    return _lan_url("/send")
 
 
 @router.post("")
@@ -52,12 +56,25 @@ async def info():
 
 
 @router.get("/qr.svg")
-async def qr():
+async def qr(path: str = Query(default="/send", max_length=1500), plain: bool = False):
+    """QR code that opens one of this backend's own pages on a phone.
+
+    Default look is light modules on a transparent background (for the dark
+    launcher sheet). `plain=1` gives the standard dark-on-white code with its
+    own quiet zone, which every phone camera reads.
+
+    `path` is a path on this server (e.g. /timers, /list?url=…). The host is
+    never taken from the request, so the code can only ever point back here:
+    it must start with exactly one slash (// would be another host)."""
     import segno
 
-    url = _send_url()
+    if (not path.startswith("/") or path.startswith("//") or "\\" in path
+            or any(ord(ch) < 0x20 for ch in path)):
+        raise HTTPException(400, "path must be a path on this server, like /timers")
+    url = _lan_url(path)
     if not url:
         raise HTTPException(404, "No LAN address detected")
     buf = io.BytesIO()
-    segno.make(url, error="m").save(buf, kind="svg", scale=6, dark="#f2f0eb", light=None)
+    colors = {"dark": "#14161a", "light": "#ffffff"} if plain else {"dark": "#f2f0eb", "light": None}
+    segno.make(url, error="m").save(buf, kind="svg", scale=6, **colors)
     return Response(content=buf.getvalue(), media_type="image/svg+xml")
