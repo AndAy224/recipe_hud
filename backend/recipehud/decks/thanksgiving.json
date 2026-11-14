@@ -206,6 +206,48 @@
       "blurb": "Granny Smiths baked in a buttery brown sugar syrup"
     },
     {
+      "url": "https://sallysbakingaddiction.com/pumpkin-cheesecake/",
+      "name": "Pumpkin Swirl Cheesecake",
+      "category": "dessert",
+      "emoji": "🎃",
+      "blurb": "Creamy cheesecake swirled with spiced pumpkin on a gingersnap crust"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/apple-crisp/",
+      "name": "Apple Crisp",
+      "category": "dessert",
+      "emoji": "🍎",
+      "blurb": "Thick-cut cinnamon apples baked under a buttery brown sugar and oat crumble"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/pumpkin-roll/",
+      "name": "Pumpkin Roll",
+      "category": "dessert",
+      "emoji": "🌀",
+      "blurb": "Spiced pumpkin sponge rolled around a cream cheese filling"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/salted-caramel-apple-pie/",
+      "name": "Salted Caramel Apple Pie",
+      "category": "dessert",
+      "emoji": "🥧",
+      "blurb": "Double-crust apple pie with salted caramel in the filling and more on top"
+    },
+    {
+      "url": "https://preppykitchen.com/sweet-potato-pie/",
+      "name": "Sweet Potato Pie",
+      "category": "dessert",
+      "emoji": "🍠",
+      "blurb": "Silky sweet potato custard with ginger and vanilla in a flaky crust"
+    },
+    {
+      "url": "https://natashaskitchen.com/pumpkin-cheesecake-recipe/",
+      "name": "Pumpkin Cheesecake",
+      "category": "dessert",
+      "emoji": "🍰",
+      "blurb": "Spiced pumpkin cheesecake on a cinnamon graham cracker crust"
+    },
+    {
       "url": "https://www.simplyrecipes.com/recipes/hot_mulled_cider/",
       "name": "Hot Mulled Cider",
       "category": "drink",
@@ -247,6 +289,62 @@
       "category": "drink",
       "emoji": "🍎",
       "blurb": "Made from whole apples and an orange, with cinnamon, nutmeg and clove"
+    },
+    {
+      "url": "https://www.acouplecooks.com/apple-cider-mimosa/",
+      "name": "Apple Cider Mimosa",
+      "category": "drink",
+      "emoji": "🥂",
+      "blurb": "Apple cider and sparkling wine in a cinnamon sugar-rimmed flute"
+    },
+    {
+      "url": "https://www.acouplecooks.com/apple-cider-margarita/",
+      "name": "Apple Cider Margarita",
+      "category": "drink",
+      "emoji": "🍏",
+      "blurb": "Tequila, apple cider, triple sec and lime with a cinnamon sugar rim"
+    },
+    {
+      "url": "https://www.acouplecooks.com/pumpkin-spice-latte/",
+      "name": "Pumpkin Spice Latte",
+      "category": "drink",
+      "emoji": "☕",
+      "blurb": "Espresso and steamed milk with real pumpkin, maple syrup and pumpkin pie spice"
+    },
+    {
+      "url": "https://www.acouplecooks.com/thanksgiving-punch/",
+      "name": "Thanksgiving Punch",
+      "category": "drink",
+      "emoji": "🍊",
+      "blurb": "Pomegranate, fresh orange and lemon with soda water and maple, bourbon optional"
+    },
+    {
+      "url": "https://www.acouplecooks.com/apple-cider-mule/",
+      "name": "Apple Cider Mule",
+      "category": "drink",
+      "emoji": "🍎",
+      "blurb": "Vodka, apple cider and lime topped with ginger beer in a copper mug"
+    },
+    {
+      "url": "https://www.acouplecooks.com/pumpkin-martini/",
+      "name": "Pumpkin Martini",
+      "category": "drink",
+      "emoji": "🎃",
+      "blurb": "Vodka shaken with pumpkin, cream, maple and spice in a graham cracker-rimmed glass"
+    },
+    {
+      "url": "https://www.acouplecooks.com/apple-cider-old-fashioned/",
+      "name": "Apple Cider Old Fashioned",
+      "category": "drink",
+      "emoji": "🥃",
+      "blurb": "Bourbon stirred with a reduced apple cider syrup, bitters and orange peel"
+    },
+    {
+      "url": "https://www.acouplecooks.com/thanksgiving-sangria/",
+      "name": "Thanksgiving Sangria",
+      "category": "drink",
+      "emoji": "🍷",
+      "blurb": "Red wine steeped with apples, citrus and a cinnamon, clove and star anise syrup"
     }
   ]
 }

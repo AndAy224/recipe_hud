@@ -183,6 +183,97 @@
       "blurb": "Vodka, coffee liqueur and fresh espresso shaken to a foamy top"
     },
     {
+      "url": "https://www.acouplecooks.com/pomegranate-martini/",
+      "name": "Pomegranate Martini",
+      "category": "drink",
+      "emoji": "🍸",
+      "blurb": "Ruby-red vodka martini with pomegranate juice, Cointreau and lemon"
+    },
+    {
+      "url": "https://www.acouplecooks.com/baileys-hot-chocolate/",
+      "name": "Baileys Hot Chocolate",
+      "category": "drink",
+      "emoji": "🍫",
+      "blurb": "Stovetop cocoa with melted chocolate, spiked with Irish cream and topped with whipped cream"
+    },
+    {
+      "url": "https://www.acouplecooks.com/brandy-alexander/",
+      "name": "Brandy Alexander",
+      "category": "drink",
+      "emoji": "🥛",
+      "blurb": "Cognac, crème de cacao and cream shaken silky, with fresh nutmeg on top"
+    },
+    {
+      "url": "https://www.acouplecooks.com/kir-royale/",
+      "name": "Kir Royale",
+      "category": "drink",
+      "emoji": "🥂",
+      "blurb": "Crème de cassis topped with sparkling wine, two ingredients and very festive"
+    },
+    {
+      "url": "https://www.acouplecooks.com/peppermint-martini/",
+      "name": "Peppermint Martini",
+      "category": "drink",
+      "emoji": "🍬",
+      "blurb": "Peppermint schnapps, crème de cacao and cream with a crushed candy rim"
+    },
+    {
+      "url": "https://www.acouplecooks.com/chocolate-martini/",
+      "name": "Chocolate Martini",
+      "category": "drink",
+      "emoji": "🍫",
+      "blurb": "Irish cream, crème de cacao and vodka in a chocolate-swirled glass"
+    },
+    {
+      "url": "https://www.acouplecooks.com/amaretto-sour/",
+      "name": "Amaretto Sour",
+      "category": "drink",
+      "emoji": "🍒",
+      "blurb": "Amaretto, a little bourbon and fresh lemon under a frothy top, with a cherry"
+    },
+    {
+      "url": "https://punchdrink.com/recipes/champagne-cocktail/",
+      "name": "Champagne Cocktail",
+      "category": "drink",
+      "emoji": "🍾",
+      "blurb": "A bitters-soaked sugar cube fizzing at the bottom of a glass of Champagne"
+    },
+    {
+      "url": "https://www.loveandlemons.com/old-fashioned/",
+      "name": "Old Fashioned",
+      "category": "drink",
+      "emoji": "🥃",
+      "blurb": "Bourbon or rye stirred with sugar and bitters over a big cube, orange twist"
+    },
+    {
+      "url": "https://punchdrink.com/recipes/manhattan/",
+      "name": "Manhattan",
+      "category": "drink",
+      "emoji": "🍒",
+      "blurb": "Rye or bourbon stirred with sweet vermouth and Angostura bitters"
+    },
+    {
+      "url": "https://www.loveandlemons.com/negroni/",
+      "name": "Negroni",
+      "category": "drink",
+      "emoji": "🍊",
+      "blurb": "Equal parts gin, Campari and sweet vermouth over ice with orange peel"
+    },
+    {
+      "url": "https://www.loveandlemons.com/chai-latte/",
+      "name": "Chai Latte",
+      "category": "drink",
+      "emoji": "🫖",
+      "blurb": "Black tea simmered with cinnamon, cardamom, cloves, star anise and ginger, with frothy milk"
+    },
+    {
+      "url": "https://www.bbcgoodfood.com/recipes/bucks-fizz",
+      "name": "Buck's Fizz",
+      "category": "drink",
+      "emoji": "🍊",
+      "blurb": "Freshly squeezed orange juice topped with chilled Champagne for Christmas morning"
+    },
+    {
       "url": "https://www.recipetineats.com/standing-rib-roast/",
       "name": "Prime Rib",
       "category": "main",
@@ -407,6 +498,142 @@
       "category": "dessert",
       "emoji": "☕",
       "blurb": "Espresso-soaked ladyfingers layered with mascarpone cream and cocoa"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/pinwheel-cookies/",
+      "name": "Pinwheel Cookies",
+      "category": "dessert",
+      "emoji": "🌀",
+      "blurb": "Vanilla and chocolate doughs rolled into a slice-and-bake swirl",
+      "yields": "28 cookies"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/stained-glass-window-cookies/",
+      "name": "Stained Glass Cookies",
+      "category": "dessert",
+      "emoji": "🌟",
+      "blurb": "Sugar cookie cut-outs with jewel-coloured melted candy windows",
+      "yields": "24 cookies"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/coconut-macaroons/",
+      "name": "Coconut Macaroons",
+      "category": "dessert",
+      "emoji": "🥥",
+      "blurb": "Chewy mounds of sweet coconut with vanilla and almond, toasted golden",
+      "yields": "18 macaroons"
+    },
+    {
+      "url": "https://sallysbakingaddiction.com/homemade-chocolate-truffles/",
+      "name": "Chocolate Truffles",
+      "category": "dessert",
+      "emoji": "🍫",
+      "blurb": "Two-ingredient chocolate and cream ganache rolled in cocoa, nuts or sprinkles",
+      "yields": "20 truffles"
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/shortbread-recipe",
+      "name": "Shortbread",
+      "category": "dessert",
+      "emoji": "🧈",
+      "blurb": "Crisp, buttery shortbread with vanilla and an optional hint of almond"
+    },
+    {
+      "url": "https://preppykitchen.com/peanut-butter-blossoms/",
+      "name": "Peanut Butter Blossoms",
+      "category": "dessert",
+      "emoji": "🥜",
+      "blurb": "Soft sugar-rolled peanut butter cookies, each pressed with a chocolate kiss",
+      "yields": "3 dozen"
+    },
+    {
+      "url": "https://preppykitchen.com/molasses-cookies/",
+      "name": "Molasses Cookies",
+      "category": "dessert",
+      "emoji": "🍪",
+      "blurb": "Chewy, crackle-topped cookies spiced with cinnamon, ginger and cloves",
+      "yields": "30 cookies"
+    },
+    {
+      "url": "https://preppykitchen.com/fruit-cake/",
+      "name": "Fruit Cake",
+      "category": "dessert",
+      "emoji": "🍰",
+      "blurb": "Apricots, raisins, figs and crystallized ginger soaked in rum or brandy"
+    },
+    {
+      "url": "https://preppykitchen.com/panettone/",
+      "name": "Panettone",
+      "category": "dessert",
+      "emoji": "🍞",
+      "blurb": "Tall Italian Christmas bread studded with rum-soaked raisins and candied citrus peel"
+    },
+    {
+      "url": "https://natashaskitchen.com/pavlova-recipe/",
+      "name": "Mini Pavlovas",
+      "category": "dessert",
+      "emoji": "🍓",
+      "blurb": "Crisp meringue shells with marshmallowy centres, whipped cream and fresh berries"
+    },
+    {
+      "url": "https://www.simplyrecipes.com/recipes/peanut_brittle/",
+      "name": "Peanut Brittle",
+      "category": "dessert",
+      "emoji": "🥜",
+      "blurb": "Buttery, shattering caramel candy packed with roasted peanuts"
+    },
+    {
+      "url": "https://preppykitchen.com/red-velvet-cookies/",
+      "name": "Red Velvet Cookies",
+      "category": "dessert",
+      "emoji": "❤️",
+      "blurb": "Soft, cocoa-kissed red velvet cookies sandwiched around a cream cheese filling"
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/pizzelle-recipe",
+      "name": "Pizzelle",
+      "category": "dessert",
+      "emoji": "❄️",
+      "blurb": "Thin, crisp Italian Christmas waffle cookies pressed in a patterned iron",
+      "yields": "30 pizzelle"
+    },
+    {
+      "url": "https://preppykitchen.com/rum-balls/",
+      "name": "Rum Balls",
+      "category": "dessert",
+      "emoji": "🥃",
+      "blurb": "No-bake bites of vanilla wafers, pecans, cocoa and dark rum",
+      "yields": "About 50"
+    },
+    {
+      "url": "https://preppykitchen.com/divinity/",
+      "name": "Divinity",
+      "category": "dessert",
+      "emoji": "☁️",
+      "blurb": "Old-fashioned Southern meringue candy, light as a cloud, with chopped pecans",
+      "yields": "24 pieces"
+    },
+    {
+      "url": "https://www.kingarthurbaking.com/recipes/our-easiest-stollen-recipe",
+      "name": "Easy Stollen",
+      "category": "dessert",
+      "emoji": "🍞",
+      "blurb": "A quick no-yeast take on the German Christmas loaf, full of dried fruit under powdered sugar"
+    },
+    {
+      "url": "https://www.simplyrecipes.com/recipes/pfeffernusse_spice_cookies/",
+      "name": "Pfeffernüsse",
+      "category": "dessert",
+      "emoji": "🍪",
+      "blurb": "Glazed German spice cookies with molasses, honey, cinnamon and cardamom",
+      "yields": "About 40 cookies"
+    },
+    {
+      "url": "https://www.recipetineats.com/christmas-trifle/",
+      "name": "Christmas Trifle",
+      "category": "dessert",
+      "emoji": "🍓",
+      "blurb": "Layers of liqueur-soaked cake, jelly, custard and cream piled with berries"
     }
   ]
 }
