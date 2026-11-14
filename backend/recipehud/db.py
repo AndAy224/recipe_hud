@@ -2,7 +2,7 @@ from pathlib import Path
 
 import aiosqlite
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 
@@ -48,6 +48,15 @@ class Database:
             await self.conn.execute(
                 "ALTER TABLE recipe_cache ADD COLUMN meta_json TEXT")
             await self.conn.execute("PRAGMA user_version = 5")
+            await self.conn.commit()
+        if version < 6:
+            # No shape change. The admin login was removed long ago (there is
+            # no authentication at all); this drops the password hash it left
+            # behind in the settings table, so no stale credential is kept —
+            # or carried along in every backup.
+            await self.conn.execute(
+                "DELETE FROM settings WHERE key = 'admin_password_hash'")
+            await self.conn.execute("PRAGMA user_version = 6")
             await self.conn.commit()
 
     async def close(self) -> None:

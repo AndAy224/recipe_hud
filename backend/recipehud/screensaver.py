@@ -9,7 +9,9 @@ as a rotating photo screensaver and stops timing out to OFF in the daytime
 A deck is data, not code: its `ui` block carries everything the screensaver
 shows that is specific to it (category labels, colours, effects, the
 countdown line), so a new season is a new JSON file. When seasons overlap the
-deck with the highest `priority` wins.
+deck with the highest `priority` wins — unless one is picked by hand: the
+`screensaver_theme` setting (admin panel) names a deck to show whatever the
+date, and "auto" goes back to the calendar.
 
 Out of season there is a second, built-in deck: the user's own saved recipes
 (`saved_deck`, setting `screensaver_saved_enabled`). It only changes what the
@@ -149,6 +151,8 @@ def load_decks() -> tuple[dict, ...]:
     for path in sorted(DECK_DIR.glob("*.json")):
         deck = json.loads(path.read_text(encoding="utf-8"))
         deck.setdefault("theme", path.stem)
+        deck["theme"] = str(deck["theme"]).lower()
+        deck.setdefault("name", deck["theme"].replace("-", " ").title())
         deck["priority"] = int(deck.get("priority", 0))
         deck["ui"] = _validate_ui(deck.get("ui") or {}, path.name)
         deck["start"] = _month_day(deck["season"]["start"])
@@ -169,13 +173,45 @@ def in_season(deck: dict, today: datetime.date) -> bool:
     return now >= start or now <= end  # window wraps past Jan 1
 
 
+def calendar_deck(today: datetime.date | None = None) -> dict | None:
+    """The deck the calendar picks: in season today, highest priority first
+    (file order breaks a tie)."""
+    today = today or datetime.date.today()
+    candidates = [deck for deck in load_decks() if deck["items"] and in_season(deck, today)]
+    return max(candidates, key=lambda deck: deck["priority"], default=None)
+
+
 def active_deck(store: SettingsStore, today: datetime.date | None = None) -> dict | None:
     if not store.get("screensaver_enabled"):
         return None
+    choice = store.get("screensaver_theme")
+    if choice != "auto":
+        # Picked by hand in the admin panel: shown whatever the date. A name
+        # that no longer matches a deck (its file was removed) falls back to
+        # the calendar instead of leaving the screen blank.
+        picked = next((deck for deck in load_decks()
+                       if deck["theme"] == choice and deck["items"]), None)
+        if picked:
+            return picked
+    return calendar_deck(today)
+
+
+def deck_choices(store: SettingsStore, today: datetime.date | None = None) -> dict:
+    """What the admin panel's theme picker needs: every deck, which one the
+    calendar would pick today, and the current selection."""
     today = today or datetime.date.today()
-    candidates = [deck for deck in load_decks() if deck["items"] and in_season(deck, today)]
-    # Overlapping seasons: the highest priority wins (file order breaks a tie).
-    return max(candidates, key=lambda deck: deck["priority"], default=None)
+    auto = calendar_deck(today)
+    return {
+        "selected": store.get("screensaver_theme"),
+        "auto": auto["theme"] if auto else None,
+        "decks": [{
+            "theme": deck["theme"],
+            "name": deck["name"],
+            "season": deck["season"],
+            "in_season": in_season(deck, today),
+            "cards": len(deck["items"]),
+        } for deck in load_decks() if deck["items"]],
+    }
 
 
 def deck_category(url: str) -> str | None:
@@ -276,10 +312,19 @@ async def current_deck(db: Database, store: SettingsStore) -> dict:
             "ui": None, "items": []}
 
 
+_warm_lock = asyncio.Lock()
+
+
 async def warm(db: Database, store: SettingsStore) -> dict:
-    """Make sure every in-season card has a cached recipe and a local photo.
-    Rows that already have both are left alone (no refetch), so after the
-    first pass this costs nothing but retries of earlier failures."""
+    """Make sure every card of the active deck has a cached recipe and a local
+    photo. Rows that already have both are left alone (no refetch), so after
+    the first pass this costs nothing but retries of earlier failures."""
+    # One pass at a time: the daily loop and a theme change can coincide.
+    async with _warm_lock:
+        return await _warm(db, store)
+
+
+async def _warm(db: Database, store: SettingsStore) -> dict:
     deck = active_deck(store)
     if not deck:
         return {"active": False}

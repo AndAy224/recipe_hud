@@ -20,6 +20,13 @@ async def get_deck(request: Request):
     return await screensaver.current_deck(request.app.state.db, request.app.state.store)
 
 
+@router.get("/decks")
+async def list_decks(request: Request):
+    """Every deck, the one the calendar picks today, and the current choice
+    (`screensaver_theme`) — for the admin panel's theme picker."""
+    return screensaver.deck_choices(request.app.state.store)
+
+
 @router.post("/add")
 async def add_to_my_recipes(request: Request, body: AddBody):
     """Save a screensaver card into My Recipes, tagged with the deck's tag and

@@ -33,6 +33,10 @@ DEFAULTS: dict = {
     # one is in season it is how the CLOCK state looks, and CLOCK stops timing
     # out to OFF in the daytime — night still goes black via the night window.
     "screensaver_enabled": True,
+    # Which seasonal deck to show: "auto" follows the calendar (each deck's own
+    # season; the highest priority wins an overlap), or a deck's theme name
+    # ("christmas", "thanksgiving", …) to show that one whatever the date.
+    "screensaver_theme": "auto",
     # Out of season, show the user's own saved recipes on the CLOCK screen
     # instead of the plain clock. Cosmetic only: CLOCK still times out to OFF.
     "screensaver_saved_enabled": True,
@@ -45,10 +49,6 @@ DEFAULTS: dict = {
     "brightness_night_pct": 50,     # % of brightness_active inside the night window
     "brightness_off": 0,            # backlight behind the black OFF scrim
 }
-
-# The admin panel has no login; a hash left over from when it did must still
-# never be served to clients.
-SECRET_KEYS = {"admin_password_hash"}
 
 
 class SettingError(ValueError):
@@ -129,6 +129,16 @@ def _lat_lon(value):
     return text
 
 
+def _deck_theme(value):
+    from .screensaver import load_decks  # lazy: screensaver.py imports this module
+
+    choice = str(value).strip().lower() or "auto"
+    themes = [deck["theme"] for deck in load_decks()]
+    if choice != "auto" and choice not in themes:
+        raise ValueError(f"must be auto or one of: {', '.join(themes)}")
+    return choice
+
+
 VALIDATORS: dict = {
     "idle_timeout_s": _int(1, 86400),
     "clock_to_off_s": _int(1, 86400),
@@ -148,6 +158,7 @@ VALIDATORS: dict = {
     "weather_location": _lat_lon,
     "wine_pairing_enabled": _bool,
     "screensaver_enabled": _bool,
+    "screensaver_theme": _deck_theme,
     "screensaver_saved_enabled": _bool,
     "backlight_control": _bool,
     "brightness_active": _int(0, 100),
@@ -180,7 +191,10 @@ class SettingsStore:
         return key in self._stored
 
     def public(self) -> dict:
-        return {k: v for k, v in self._cache.items() if k not in SECRET_KEYS}
+        """Settings as clients see them: the known keys only. A row left in the
+        table by an older version (the admin password hash was one, until the
+        v6 migration deleted it) is never served."""
+        return {k: v for k, v in self._cache.items() if k in DEFAULTS}
 
     def on_change(self, listener) -> None:
         self._listeners.append(listener)

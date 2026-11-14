@@ -204,7 +204,7 @@ const SETTINGS_FIELDS = [
   "idle_timeout_s", "clock_to_off_s", "night_mode_enabled", "night_dim_enabled",
   "night_off_start", "night_off_end", "night_idle_timeout_s", "alarm_volume",
   "theme", "weather_location", "display_output", "touch_device",
-  "screensaver_enabled", "screensaver_saved_enabled", "backlight_control", "brightness_active", "brightness_night_pct",
+  "screensaver_enabled", "screensaver_theme", "screensaver_saved_enabled", "backlight_control", "brightness_active", "brightness_night_pct",
   "brightness_off", "wine_pairing_enabled", "alarm_auto_dismiss_s", "recipe_cache_max_age_days",
 ];
 
@@ -216,8 +216,42 @@ for (const type of ["input", "change"]) {
   $("settings-form").addEventListener(type, () => { settingsDirty = true; });
 }
 
+// --- holiday theme picker --------------------------------------------------
+// The decks come from the backend (one per JSON file in decks/), so a new deck
+// shows up here by itself. "Automatic" follows each deck's own season.
+
+let lastSettings = null;
+
+function fmtMonthDay(mmdd) {
+  const [month, day] = mmdd.split("-").map(Number);
+  return new Date(2024, month - 1, day).toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+async function loadThemes() {
+  let info;
+  try { info = await (await fetch("/api/screensaver/decks")).json(); } catch { return; }
+  const select = $("settings-form").elements.screensaver_theme;
+  const byTheme = Object.fromEntries(info.decks.map((d) => [d.theme, d]));
+  const today = info.auto ? byTheme[info.auto].name : "nothing in season";
+  const option = (value, text) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+    return opt;
+  };
+  select.replaceChildren(
+    option("auto", `Automatic — follow the calendar (today: ${today})`),
+    ...info.decks.map((d) => option(d.theme,
+      `${d.name} — ${d.cards} recipes, in season ${fmtMonthDay(d.season.start)} – ${fmtMonthDay(d.season.end)}`)));
+  // The options did not exist when the settings were first filled in.
+  if (!settingsDirty) select.value = (lastSettings || info).screensaver_theme ?? info.selected;
+  $("theme-hint").textContent =
+    "Automatic shows whichever theme is in season. Pick one to show it whatever the date.";
+}
+
 function fillSettings(settings) {
   settingsDirty = false;
+  lastSettings = settings;
   const form = $("settings-form");
   for (const key of SETTINGS_FIELDS) {
     const input = form.elements[key];
@@ -496,3 +530,4 @@ loadSites();
 loadRecipes();
 loadPresets();
 loadSettings();
+loadThemes();

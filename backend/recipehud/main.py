@@ -58,10 +58,23 @@ async def lifespan(app: FastAPI):
     watcher = input_watch.start(idle, store)
     if watcher:
         tasks.append(watcher)
+
+    # Picking a theme by hand can put a deck on screen whose photos were never
+    # fetched (the daily warm pass only covers the deck that was active then).
+    # Fetch them now rather than show emoji placeholders until tomorrow.
+    warming: set[asyncio.Task] = set()
+
+    def _warm_on_theme_change(changed: dict) -> None:
+        if "screensaver_theme" in changed or changed.get("screensaver_enabled"):
+            task = asyncio.create_task(screensaver.warm(db, store))
+            warming.add(task)  # keep a reference until it finishes
+            task.add_done_callback(warming.discard)
+
+    store.on_change(_warm_on_theme_change)
     log.info("recipehud up: display backend=%s backlight=%s debug=%s",
              display_backend.name, backlight.name, CONFIG.debug)
     yield
-    for task in tasks:
+    for task in [*tasks, *warming]:
         task.cancel()
     # A stopped backend must not leave the panel dimmed (bounded, best-effort).
     await backlight.restore(store.get("brightness_active"))

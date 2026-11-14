@@ -464,7 +464,8 @@ button:active { filter: brightness(1.3); }
         nightDimEnabled = !!data.night_dim_enabled;
         applyNight();
       }
-      if (("screensaver_enabled" in data || "screensaver_saved_enabled" in data) && saver) saver.refresh();
+      // Any screensaver_* setting (on/off, the chosen theme) changes the deck.
+      if (saver && Object.keys(data).some((key) => key.startsWith("screensaver_"))) saver.refresh();
     } else if (type === "navigate") {
       location.href = data.url;
     }

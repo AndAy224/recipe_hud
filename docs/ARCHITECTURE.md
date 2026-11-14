@@ -72,7 +72,10 @@ nth}` rule such as the 4th Thursday of November). Nothing season-specific
 lives in code: a new season is a new JSON file, validated at load (a typo
 stops the backend rather than half-theming the screen). Where seasons overlap
 the highest `priority` wins — Thanksgiving (20) takes November out of
-Christmas (10). While a deck is in season and `screensaver_enabled`, CLOCK is
+Christmas (10). The `screensaver_theme` setting (admin → Holiday theme)
+overrides the calendar: `auto`, or a deck's theme name to show that deck
+whatever the date (`GET /api/screensaver/decks` lists the choices; changing it
+starts a warm pass so the newly chosen deck has its photos). While a deck is in season and `screensaver_enabled`, CLOCK is
 the screensaver — a rotating photo card per recipe over the clock — and CLOCK
 stops timing out to OFF in the daytime; the night window still blacks it out,
 and when the window ends an OFF panel returns to the screensaver on its own.

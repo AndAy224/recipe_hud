@@ -564,7 +564,7 @@ const ws = new WSClient("launcher", (type, data) => {
   } else if (type === "settings.updated") {
     Object.assign(settings, data);
     renderKeepAwake(); applyTheme(); applyNight();
-    if ("screensaver_enabled" in data || "screensaver_saved_enabled" in data) {
+    if (Object.keys(data).some((key) => key.startsWith("screensaver_"))) {
       loadHolidayIdeas();
       getFallbackSaver()?.refresh();
     }

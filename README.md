@@ -41,6 +41,8 @@ touch panel mounted portrait (720 wide × 2560 tall).
   ideas row on the launcher. At night the panel still goes black, with the
   backlight really dimmed over DDC/CI. A season is one JSON file
   (`backend/recipehud/decks/`): recipes, colours, effects and countdown line.
+  The admin panel's **Holiday theme** picker follows the calendar by default,
+  or shows the theme you choose whatever the date.
   The rest of the year the clock screen shows your own saved recipes instead
   (and goes black on the usual timeout).
 - **Send-to-kiosk** — scan the QR on the launcher (📲) to open `/send` on
